@@ -182,13 +182,18 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-rate]");if
 $id("starPick").addEventListener("change",e=>{const v=+e.target.value;$id("starWord").textContent=v+" star"+(v>1?"s":"")+" · "+STAR_WORDS[v];const m=$id("rateMsg");if(m.classList.contains("err")){m.textContent="";m.className="msg"}});
 rateDlg.addEventListener("click",e=>{if(e.target===rateDlg)rateDlg.close()});
 function walletProvider(){return (window.phantom&&window.phantom.solana)||window.solflare||(window.backpack&&window.backpack.solana)||window.solana||null}
+// On phones, Safari/Chrome can't reach wallet apps. Open this page inside the Phantom app's browser instead.
+const IS_MOBILE=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+function openInWalletApp(){if(!IS_MOBILE)return false;const u=encodeURIComponent(location.href),r=encodeURIComponent(location.origin);location.href="https://phantom.app/ul/browse/"+u+"?ref="+r;return true}
+function waitForWallet(ms=1500){return new Promise(ok=>{const p=walletProvider();if(p)return ok(p);const t0=Date.now(),iv=setInterval(()=>{const q=walletProvider();if(q||Date.now()-t0>ms){clearInterval(iv);ok(q)}},100)})}
+const walletErr=err=>err&&err.code===4001?"You cancelled in your wallet. Nothing was connected.":"Your wallet didn't connect"+(err&&err.message?" ("+String(err.message).slice(0,120)+")":"")+". Unlock Phantom and try again."
 const b64=u8=>{let s="";u8.forEach(x=>s+=String.fromCharCode(x));return btoa(s)};
 $id("rateGo").addEventListener("click",async()=>{
   const m=$id("rateMsg"),pick=document.querySelector('#starPick input:checked');
   if(!pick){m.className="msg err";m.textContent="Pick a star rating first.";$id("st5").focus();return}
   if(!CONFIG.api){m.className="msg";m.textContent="Ratings open when Exposure goes live. Your pick isn't saved yet.";return}
   const prov=walletProvider();
-  if(!prov){m.className="msg err";m.textContent="No Solana wallet found in this browser. Open Exposure in Phantom, Solflare or Backpack, or install one, then try again.";return}
+  if(!prov){if(openInWalletApp())return;m.className="msg err";m.textContent="No Solana wallet found in this browser. Open Exposure in Phantom, Solflare or Backpack, or install one, then try again.";return}
   const stars=+pick.value,go=$id("rateGo");go.disabled=true;
   try{
     m.className="msg";m.textContent="Approve the connection in your wallet…";
@@ -517,10 +522,10 @@ try{ME=localStorage.getItem("exposure-wallet")||null}catch(e){}
 const isAddr=v=>/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v||"");
 function syncWalletBtn(){const b=$id("walletBtn");if(!b)return;b.innerHTML=ME?`<i class="wDot"></i><span class="mono">${esc(shortW(ME))}</span>`:`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12.5h2"/><path d="M3 9h15a3 3 0 0 1 3 3"/></svg><span>Connect wallet</span>`;b.classList.toggle("on",!!ME)}
 async function connectWallet(){
-  const prov=walletProvider();
-  if(!prov){meMsg="No Solana wallet found in this browser. Open Exposure in Phantom, Solflare or Backpack, or paste an address below to look it up.";go("me");renderMe();return}
-  try{const r=await prov.connect();const a=String((r&&r.publicKey)||prov.publicKey);if(!isAddr(a))throw 0;setMe(a);go("me")}
-  catch(err){meMsg=err&&err.code===4001?"You cancelled in your wallet. Nothing was connected.":"Your wallet didn't respond. Try again.";go("me");renderMe()}
+  const prov=await waitForWallet();
+  if(!prov){if(openInWalletApp())return;meMsg="No Solana wallet found in this browser. Install Phantom (phantom.app) and refresh, or paste an address below to look it up.";go("me");renderMe();return}
+  try{const r=await prov.connect();const a=String((r&&r.publicKey)||prov.publicKey);if(!isAddr(a))throw new Error("no address returned");setMe(a);go("me")}
+  catch(err){meMsg=walletErr(err);go("me");renderMe()}
 }
 function setMe(a){ME=a;MEDATA=null;meMsg="";try{a?localStorage.setItem("exposure-wallet",a):localStorage.removeItem("exposure-wallet")}catch(e){}syncWalletBtn();loadMe()}
 async function loadMe(){
@@ -971,10 +976,10 @@ function lfSetStep(n){document.querySelectorAll("#lfSteps li").forEach((li,i)=>{
 function lfWalletUI(){const el=$id("lfWallet");if(!el)return;const buy=+($id("lBuy").value||0),unit=$id("buyUnit")?$id("buyUnit").textContent:"SOL";
   el.innerHTML=walletConnected()?`<i class="wDot"></i><span>Launching from <b class="mono">${esc(shortW(ME))}</b>${buy>0?` · dev buy ${buy} ${esc(unit)}`:""}</span>`
     :`<span>Your own wallet signs the launch${buy>0?" and pays the dev buy":""}. Exposure never holds your funds.</span><button type="button" class="btn sm" id="lfConnect">Connect wallet</button>`}
-document.addEventListener("click",async e=>{if(!e.target.closest("#lfConnect"))return;const m=$id("lMsg"),prov=walletProvider();
-  if(!prov){m.className="msg err";m.textContent="No Solana wallet found in this browser. Open Exposure in Phantom, Solflare or Backpack, or install one.";return}
+document.addEventListener("click",async e=>{if(!e.target.closest("#lfConnect"))return;const m=$id("lMsg"),prov=await waitForWallet();
+  if(!prov){if(openInWalletApp())return;m.className="msg err";m.textContent="No Solana wallet found in this browser. Install Phantom (phantom.app) and refresh.";return}
   try{const r=await prov.connect();const a=String((r&&r.publicKey)||prov.publicKey);setMe(a);lfWalletUI();m.textContent="";m.className="msg"}
-  catch(err){m.className="msg err";m.textContent=err&&err.code===4001?"You cancelled in your wallet. Nothing was connected.":"Your wallet didn't respond. Try again."}});
+  catch(err){m.className="msg err";m.textContent=walletErr(err)}});
 $id("lBuy").addEventListener("input",lfWalletUI);
 document.getElementById("lf").addEventListener("submit",async e=>{
   e.preventDefault();const m=$id("lMsg"),n=$id("lName").value.trim(),t=$id("lTick").value.trim(),go_=$id("lfGo");
@@ -984,7 +989,7 @@ document.getElementById("lf").addEventListener("submit",async e=>{
   if(!$id("lImg").files[0]){m.textContent="Add an image. pump.fun requires one.";return}
   if(!CONFIG.api){m.className="msg";m.textContent=DEMO_ON?"Demo mode: this is where your wallet would pop up to sign the launch. Launches open on launch day.":"Launches open soon. Your details are checked and ready, so come back on launch day.";if(DEMO_ON){lfSetStep(2);setTimeout(()=>lfSetStep(1),2500)}return}
   const prov=walletProvider();
-  if(!prov){m.textContent="No Solana wallet found in this browser. Open Exposure in Phantom, Solflare or Backpack, or install one.";return}
+  if(!prov){if(openInWalletApp())return;m.textContent="No Solana wallet found in this browser. Open Exposure in Phantom, Solflare or Backpack, or install one.";return}
   go_.disabled=true;
   try{
     m.className="msg";m.textContent="Approve the connection in your wallet…";
