@@ -9,8 +9,10 @@ export default guard(async (req, res) => {
   const env = Object.fromEntries(ENV.map(k => [k, !!process.env[k]]));
   const modules = {
     web3: await check(() => import("@solana/web3.js")),
-    pumpSdk: await check(() => import("@pump-fun/pump-sdk")),
     chain: await check(() => import("../lib/chain.js"))
   };
-  send(res, 200, { node: process.version, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, modules });
+  let opsWallet = null, launchBuild = null;
+  try { opsWallet = (await import("../lib/keys.js")).opsWallet(process.env.POOL_MASTER_SEED).publicKey; } catch {}
+  if (modules.chain.ok) launchBuild = await check(async () => { const c = await import("../lib/chain.js"); const b = await c.buildLaunchTx({ user: "11111111111111111111111111111112", name: "Test", symbol: "TEST", uri: "https://example.com/m.json" }); return { bytes: Buffer.from(b.tx, "base64").length, mintOk: !!b.mint, poolOk: !!b.poolWallet }; });
+  send(res, 200, { node: process.version, opsWallet, launchBuild, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, modules });
 });
