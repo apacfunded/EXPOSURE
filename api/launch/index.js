@@ -1,6 +1,7 @@
 import { db } from "../../lib/db.js";
 import { isAddress } from "../../lib/keys.js";
 import { send, allow, guard, sameOrigin, limited, paused } from "../../lib/http.js";
+import { buildLaunchTx } from "../../lib/chain.js";
 
 const MAX_BODY = 2.5 * 1024 * 1024, MAX_IMG = 2 * 1024 * 1024;
 
@@ -55,7 +56,6 @@ export default guard(async (req, res) => {
   const uri = await pin(new Blob([JSON.stringify(meta)], { type: "application/json" }), "metadata.json");
   if (uri.length > 200) return send(res, 500, { error: "server" });
 
-  const { buildLaunchTx } = await import("../../lib/chain.js");
   const built = await buildLaunchTx({ user: creator, name, symbol: ticker, uri });
   await db.insert("coins", [{ mint: built.mint, ticker, name, img: imageUrl, description, twitter: tw || null, quote: "SOL", fee_pct: 0.3, creator, pool_wallet: built.poolWallet }]);
   send(res, 200, { tx: built.tx, mint: built.mint });

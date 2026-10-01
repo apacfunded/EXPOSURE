@@ -1,11 +1,11 @@
 {
+  "installCommand": "npm install --no-audit --no-fund",
+  "buildCommand": "node -e \"console.log('static site, nothing to build')\"",
   "outputDirectory": "public",
   "functions": {
-    "api/cron/[job].js": {
-      "maxDuration": 60
-    },
-    "api/launch/index.js": {
-      "maxDuration": 30
+    "api/**/*.js": {
+      "maxDuration": 60,
+      "includeFiles": "lib/**"
     }
   },
   "headers": [

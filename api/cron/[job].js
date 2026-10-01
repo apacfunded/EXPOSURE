@@ -7,6 +7,7 @@ import { send, guard, cronAuthorized, paused } from "../../lib/http.js";
 import { allCallouts, marketCaps } from "../../lib/sources.js";
 import { planPayout, isWin, LAMPORTS } from "../../lib/payout.js";
 import { rpc } from "../../lib/rpc.js";
+import { claimFees, balance, sendFromPool } from "../../lib/chain.js";
 
 const RENT_KEEP = 2_000_000; // leave a little in each pool wallet for rent + network fees
 
@@ -44,7 +45,6 @@ async function tick() {
 }
 
 async function claim() {
-  const { claimFees, balance } = await import("../../lib/chain.js");
   const coins = await db.select("coins", "confirmed=eq.true&limit=1000");
   const out = [];
   for (const c of coins) {
@@ -61,7 +61,6 @@ async function claim() {
 async function payout() {
   const live = process.env.PAYOUTS_ENABLED === "1";
   const runCap = Math.round(Number(process.env.MAX_PAYOUT_SOL_PER_RUN || "5") * LAMPORTS);
-  const { balance, sendFromPool } = await import("../../lib/chain.js");
   const { TOP20_WALLET, RESERVE_WALLET } = process.env;
   if (!TOP20_WALLET || !RESERVE_WALLET) return { error: "TOP20_WALLET and RESERVE_WALLET must be set" };
   const coins = await db.select("coins", "confirmed=eq.true&limit=1000");
