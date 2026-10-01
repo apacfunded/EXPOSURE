@@ -8,11 +8,11 @@ const CONFIG={
   demo:false,         // sample data + live simulation (preview only). Keep false for the live site
   refreshMs:20000,
   botWallet:"",       // claims fees + sends payouts
-  top20Wallet:"",     // Top 20 bonus wallet
+  top20Wallet:"H6cXX7wzgdVizvMT7yumtd7qcXR7YUBfyt11J51wvZzV",     // Top 20 bonus wallet
   extraLaunchPrograms:[], // add a program id here only if pump.fun launches need it (e.g. custom pairs)
   xpMint:"",          // $EXPO contract address, set on launch day
-  reserveWallet:"",   // public $EXPO buyback reserve wallet
-  top20Wallet:""      // Top 20 bonus wallet
+  reserveWallet:"4mxjihySJSjKD21xWpz6pCMYUQ6HZGyiFbJKbQC6JHGY",   // public $EXPO buyback reserve wallet
+  top20Wallet:"H6cXX7wzgdVizvMT7yumtd7qcXR7YUBfyt11J51wvZzV"      // Top 20 bonus wallet
 };
 let DEMO_ON=false,demoTimer=null,DEMO_ME=null,XIDX={};
 // ===== security: clean everything the server sends before it touches the page =====
