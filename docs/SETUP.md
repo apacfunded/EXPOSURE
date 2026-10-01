@@ -34,7 +34,7 @@ The site (`public/`) and the backend (`api/`) deploy together on Vercel from thi
 | `RESERVE_WALLET` | public address |
 | `EXPO_MINT` | $EXPO mint (ratings need it; leave unset until $EXPO exists) |
 | `RATE_MIN_EXPO` | optional, minimum $EXPO to rate (default 1) |
-| `X_CLIENT_ID`, `X_CLIENT_SECRET` | X developer app (OAuth 2.0, callback `https://yourdomain.com/api/x/callback`) |
+| `X_CLIENT_ID`, `X_CLIENT_SECRET` | Later (X linking is off for now). X developer app (OAuth 2.0, callback `https://yourdomain.com/api/x/callback`) |
 | `LAUNCHES_ENABLED` | `1` to open launches |
 | `PAYOUTS_ENABLED` | `1` to send real payouts |
 | `MAX_PAYOUT_SOL_PER_RUN` | default 5 |

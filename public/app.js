@@ -4,6 +4,7 @@
 // The site calls GET {api}/state and fills every page from it. Until then everything shows empty states.
 const CONFIG={
   api:"/api",
+  xLink:false,        // X account linking (off for now; turn on once the X developer app is set up)
   demo:false,         // sample data + live simulation (preview only). Keep false for the live site
   refreshMs:20000,
   botWallet:"",       // claims fees + sends payouts
@@ -549,9 +550,9 @@ function renderMe(){
   const st=r?nextStep(r):null;
   el.innerHTML=`<div class="meHead">
       <div class="meWho">${xo?`<div class="bigPfp"><img src="${esc(xo.avatar)}" alt="" referrerpolicy="no-referrer">${emblem(r&&r.tier,30)}</div>`:emblem(r&&r.tier,64)}<div><div class="eyebrow">My Exposure</div><h1>${esc(xo?xo.name:name)}</h1>${xo?`<div class="upSub"><span class="mono">${esc(name)}</span> on Exposure · ${xLinkBadge(xo)}</div>`:""}<div class="meTags">${badge(r&&r.tier)}${t20i?`<span class="pill t20">Top 20 · #${t20i}</span>`:""}${r?starLine(r):""}</div></div></div>
-      <div class="meActs">${xo?`<button class="btn sm ghost" type="button" id="meUnlinkX">Unlink X</button>`:`<button class="btn sm xBtn" type="button" id="meLinkX">${X_ICON}Link X account</button>`}<a class="btn sm ghost" href="#u-${encodeURIComponent(ME)}">Public profile</a><button class="btn sm ghost" type="button" id="meCopy">Copy address</button><a class="btn sm ghost" href="https://solscan.io/account/${encodeURIComponent(ME)}" target="_blank" rel="noopener">Solscan ↗</a><button class="btn sm ghost" type="button" id="meOut">Disconnect</button></div>
+      <div class="meActs">${!CONFIG.xLink?"":xo?`<button class="btn sm ghost" type="button" id="meUnlinkX">Unlink X</button>`:`<button class="btn sm xBtn" type="button" id="meLinkX">${X_ICON}Link X account</button>`}<a class="btn sm ghost" href="#u-${encodeURIComponent(ME)}">Public profile</a><button class="btn sm ghost" type="button" id="meCopy">Copy address</button><a class="btn sm ghost" href="https://solscan.io/account/${encodeURIComponent(ME)}" target="_blank" rel="noopener">Solscan ↗</a><button class="btn sm ghost" type="button" id="meOut">Disconnect</button></div>
     </div>
-    ${!xo?`<div class="card xPromo">${X_ICON}<div><b>Link your X account</b><p>Show your X name and profile picture next to your Exposure username on your profile, the rankings and every payout.</p></div><button class="btn sm sig" type="button" id="meLinkX2">Link X</button></div>`:""}<p class="msg" id="meXMsg" role="status"></p>
+    ${CONFIG.xLink&&!xo?`<div class="card xPromo">${X_ICON}<div><b>Link your X account</b><p>Show your X name and profile picture next to your Exposure username on your profile, the rankings and every payout.</p></div><button class="btn sm sig" type="button" id="meLinkX2">Link X</button></div>`:""}<p class="msg" id="meXMsg" role="status"></p>
     <div class="statbar meStatbar" role="group" aria-label="Your totals">
       <div><small>Earned, all time</small><b class="up">${earned.toFixed(3)} SOL</b></div>
       <div><small>Estimated, today</small><b>${est.toFixed(3)} SOL</b></div>
@@ -587,7 +588,7 @@ function demoPfp(seed){let h=0;for(const ch of seed)h=(h*31+ch.charCodeAt(0))>>>
 const xLinkBadge=x=>x?`<a class="xBadge" href="https://x.com/${encodeURIComponent(x.handle)}" target="_blank" rel="noopener">${X_ICON}@${esc(x.handle)}</a>`:"";
 const xDlg=$id("xDlg");
 async function linkX(){
-  if(!ME)return;
+  if(!ME||!CONFIG.xLink)return;
   if(!CONFIG.api){$id("xHandle").value="";$id("xName").value="";$id("xMsg").textContent="";if(xDlg.showModal)xDlg.showModal();else xDlg.setAttribute("open","");setTimeout(()=>$id("xHandle").focus(),30);return}
   const prov=walletProvider(),m=$id("meXMsg");
   if(!prov||!walletConnected()){if(m){m.className="msg err";m.textContent="Connect this wallet first. Linking X needs a signature from it."}return}
