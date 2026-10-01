@@ -1,5 +1,4 @@
 {
-  "installCommand": "npm install --no-audit --no-fund",
   "buildCommand": "node -e \"console.log('static site, nothing to build')\"",
   "outputDirectory": "public",
   "functions": {

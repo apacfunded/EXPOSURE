@@ -8,7 +8,6 @@ const check = async f => { try { const m = await f(); return { ok: true, keys: O
 export default guard(async (req, res) => {
   const env = Object.fromEntries(ENV.map(k => [k, !!process.env[k]]));
   const modules = {
-    web3: await check(() => import("@solana/web3.js")),
     chain: await check(() => import("../lib/chain.js"))
   };
   let opsWallet = null, launchBuild = null;
