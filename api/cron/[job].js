@@ -31,8 +31,9 @@ async function tick() {
   // 4) peak within 24h, and the win/loss verdict once 24h have passed
   const open = await db.select("callouts", `won=is.null&posted_at=gt.${new Date(Date.now() - 3 * 864e5).toISOString()}&limit=2000`);
   for (const c of open) {
+    if (!Number.isFinite(Date.parse(c.posted_at))) continue;
     const end = new Date(Date.parse(c.posted_at) + 864e5).toISOString();
-    const h = await db.select("mc_history", `mint=${eq(c.mint)}&t=gte.${c.posted_at}&t=lte.${end}&select=mc&order=mc.desc&limit=1`);
+    const h = await db.select("mc_history", `mint=${eq(c.mint)}&t=gte.${encodeURIComponent(new Date(c.posted_at).toISOString())}&t=lte.${end}&select=mc&order=mc.desc&limit=1`);
     const peak = h[0] ? +h[0].mc : 0, patch = {};
     if (peak > (+c.peak_mc_24h || 0)) patch.peak_mc_24h = peak;
     if (Date.now() > Date.parse(end)) { patch.won = isWin(+c.mc_at_call, Math.max(peak, +c.peak_mc_24h || 0)); out.judged++; }

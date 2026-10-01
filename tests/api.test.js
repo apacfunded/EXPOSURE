@@ -77,3 +77,11 @@ test("wallet: rejects junk addresses", async () => {
   assert.equal((await call(w, { method: "GET", query: { addr: "<script>" } })).status, 400);
   assert.equal((await call(w, { method: "GET", query: { addr: rater.publicKey } })).status, 200);
 });
+
+test("cron tick: runs end to end with the secret on an empty database", async () => {
+  const { default: cron } = await import("../api/cron/[job].js");
+  const r = await call(cron, { method: "GET", query: { job: "tick" }, headers: { authorization: "Bearer " + "s".repeat(40) } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok("confirmed" in r.body && "mc" in r.body);
+  assert.equal((await call(cron, { method: "GET", query: { job: "nope" }, headers: { authorization: "Bearer " + "s".repeat(40) } })).status, 404);
+});

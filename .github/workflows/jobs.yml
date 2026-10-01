@@ -9,9 +9,14 @@ on:
     - cron: "*/15 * * * *"   # payouts (dry run unless PAYOUTS_ENABLED=1 in Vercel)
   workflow_dispatch:
     inputs:
-      job: { description: "tick, claim or payout", required: true, default: "tick" }
+      job:
+        description: "tick, claim or payout"
+        required: true
+        default: "tick"
 permissions: {}
-concurrency: { group: exposure-jobs-${{ github.event.schedule || inputs.job }}, cancel-in-progress: false }
+concurrency:
+  group: exposure-jobs-${{ github.event.schedule || inputs.job }}
+  cancel-in-progress: false
 jobs:
   run:
     runs-on: ubuntu-latest
