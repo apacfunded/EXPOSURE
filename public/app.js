@@ -893,8 +893,13 @@ if(CONFIG.demo&&!CONFIG.api)startDemo();else syncDemoUI();
   function start(){done=false;el.hidden=false;el.classList.remove("out");
     if(vb&&getComputedStyle(vb).display!=="none"){try{vb.currentTime=0;const q=vb.play();q&&q.catch&&q.catch(()=>{})}catch(e){}}
     try{v.currentTime=0}catch(e){}
-    const p=v.play();if(p&&p.catch)p.catch(()=>finish());
-    clearTimeout(guard);guard=setTimeout(finish,9000)}
+    tap.hidden=true;v.muted=true;
+    // phones (Low Power Mode, wallet-app browsers) can block autoplay: show a tap-to-play button instead of skipping
+    const p=v.play();if(p&&p.catch)p.catch(()=>{tap.hidden=false;clearTimeout(guard);guard=setTimeout(finish,15000)});
+    clearTimeout(guard);guard=setTimeout(()=>{if(v.paused&&v.currentTime===0){tap.hidden=false;guard=setTimeout(finish,15000)}else finish()},v.paused?2500:9000)}
+  const tap=document.getElementById("introTap");
+  tap.addEventListener("click",()=>{tap.hidden=true;v.muted=true;const q=v.play();if(q&&q.catch)q.catch(()=>finish());clearTimeout(guard);guard=setTimeout(finish,9000)});
+  v.addEventListener("playing",()=>{tap.hidden=true;clearTimeout(guard);guard=setTimeout(finish,9000)});
   v.addEventListener("ended",finish);v.addEventListener("error",finish);const srcs=v.querySelectorAll("source");srcs[srcs.length-1].addEventListener("error",finish);
   document.getElementById("introSkip").addEventListener("click",finish);
   addEventListener("keydown",e=>{if(e.key==="Escape")finish()});

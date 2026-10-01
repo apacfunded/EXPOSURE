@@ -320,6 +320,9 @@ small{font-size:12px}
 @media (max-aspect-ratio:3/4){.intro{background:#0b0603}.intro .introBg{display:none}.intro #introVid{left:0;transform:none;width:100%;height:100%;object-fit:contain;-webkit-mask-image:none;mask-image:none}}
 .intro .skip{position:absolute;right:16px;top:calc(16px + env(safe-area-inset-top,0px));min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--muted);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
 .intro .skip:hover{color:var(--ink)}
+.intro .introTap{position:absolute;left:50%;bottom:calc(14% + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 24px;border-radius:999px;border:1px solid rgba(255,164,92,.5);background:rgba(26,18,14,.85);color:var(--ink);font:600 16px/1 inherit;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.intro .introTap svg{width:18px;height:18px;fill:currentColor}
+.intro .introTap:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
 .intro .skip:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
 
 .hero p.ringCap{max-width:none;margin:8px 0 36px}
@@ -737,9 +740,10 @@ footer a{color:inherit}
 </style>
 
 <div class="intro" id="intro">
-  <video id="introBg" class="introBg" muted playsinline preload="auto" aria-hidden="true"><source src="intro.mp4" type="video/mp4"><source src="intro.webm" type="video/webm"></video>
-  <video id="introVid" muted playsinline preload="auto" aria-label="Exposure intro: callouts from pump.fun, GMGN and Fomo swirl into the Exposure logo"><source src="intro.mp4" type="video/mp4"><source src="intro.webm" type="video/webm"></video>
+  <video id="introBg" class="introBg" muted playsinline webkit-playsinline preload="metadata" aria-hidden="true"><source src="intro.mp4" type="video/mp4"><source src="intro.webm" type="video/webm"></video>
+  <video id="introVid" muted playsinline webkit-playsinline autoplay preload="auto" poster="intro-poster.jpg" aria-label="Exposure intro: callouts from pump.fun, GMGN and Fomo swirl into the Exposure logo"><source src="intro.mp4" type="video/mp4"><source src="intro.webm" type="video/webm"></video>
   <button class="skip" type="button" id="introSkip">Skip intro</button>
+  <button class="introTap" type="button" id="introTap" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>Tap to play intro</button>
 </div>
 <div class="navSweep" id="navSweep" aria-hidden="true"></div>
 <nav class="mbar" aria-label="Sections">
