@@ -1,0 +1,32 @@
+# Runs Exposure's background jobs. Needs two repo secrets (Settings > Secrets and variables > Actions):
+#   SITE_URL     e.g. https://yourdomain.com
+#   CRON_SECRET  same value as CRON_SECRET in Vercel
+name: jobs
+on:
+  schedule:
+    - cron: "*/5 * * * *"    # tick: market caps, wins, callouts, confirm launches
+    - cron: "7,37 * * * *"   # claim creator fees
+    - cron: "*/15 * * * *"   # payouts (dry run unless PAYOUTS_ENABLED=1 in Vercel)
+  workflow_dispatch:
+    inputs:
+      job: { description: "tick, claim or payout", required: true, default: "tick" }
+permissions: {}
+concurrency: { group: exposure-jobs-${{ github.event.schedule || inputs.job }}, cancel-in-progress: false }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call job
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SCHED: ${{ github.event.schedule }}
+          INPUT: ${{ inputs.job }}
+        run: |
+          case "$SCHED" in
+            "*/5 * * * *") JOB=tick;; "7,37 * * * *") JOB=claim;; "*/15 * * * *") JOB=payout;; *) JOB="$INPUT";;
+          esac
+          case "$JOB" in tick|claim|payout) ;; *) echo "bad job"; exit 1;; esac
+          if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then echo "secrets not set yet"; exit 0; fi
+          curl -sS --fail-with-body -m 90 -H "Authorization: Bearer $CRON_SECRET" "$SITE_URL/api/cron/$JOB"

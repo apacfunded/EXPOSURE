@@ -3,7 +3,7 @@
 // Set CONFIG.api to the backend URL at launch (e.g. "https://api.exposure.fun").
 // The site calls GET {api}/state and fills every page from it. Until then everything shows empty states.
 const CONFIG={
-  api:"",
+  api:"/api",
   demo:false,         // sample data + live simulation (preview only). Keep false for the live site
   refreshMs:20000,
   botWallet:"",       // claims fees + sends payouts

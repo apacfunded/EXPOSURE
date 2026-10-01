@@ -1,4 +1,13 @@
 {
+  "outputDirectory": "public",
+  "functions": {
+    "api/cron/[job].js": {
+      "maxDuration": 60
+    },
+    "api/launch/index.js": {
+      "maxDuration": 30
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
