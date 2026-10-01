@@ -1,0 +1,8 @@
+.env
+.env.*
+*.key
+*.pem
+id.json
+keypair*.json
+node_modules/
+.vercel/
