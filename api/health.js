@@ -29,7 +29,8 @@ export default guard(async (req, res) => {
     const claimSim = req.query.simclaim === "1" ? await c.claimFees(String(req.query.coin), 1, { simulate: true }).catch(e => ({ error: e.message })) : undefined;
     const { db, eq } = await import("../lib/db.js");
     const calls = await db.select("callouts", `mint=${eq(String(req.query.coin))}&order=posted_at.desc&limit=20&select=wallet,platform,tokens_at_call,tokens_now,pnl,weight,mc_at_call,posted_at,round_paid_at`).catch(e => ({ error: e.message, detail: e.detail }));
-    return { calls, claimSim, curveMarketCapSol: curve && +curve.mcSol.toFixed(2), graduated: curve ? curve.complete : null, poolWallet: pool, poolBalanceSol: (await s.getBalance(pool)) / 1e9, unclaimedBondingCurveSol: v.bondingCurve / 1e9, unclaimedPumpSwapSol: v.amm / 1e9, opsBalanceSol: opsWallet ? (await s.getBalance(opsWallet)) / 1e9 : null };
+    const holder = req.query.holder && k.isAddress(String(req.query.holder)) ? await (await import("../lib/rpc.js")).tokenBalance(String(req.query.holder), String(req.query.coin)).catch(e => ({ error: e.message })) : undefined;
+    return { holder: holder === undefined ? undefined : { wallet: String(req.query.holder), tokens: holder, enough: typeof holder === "number" && holder >= 1e9 * Number(process.env.CALLOUT_MIN_PCT || "0.01") / 100 }, calls, claimSim, curveMarketCapSol: curve && +curve.mcSol.toFixed(2), graduated: curve ? curve.complete : null, poolWallet: pool, poolBalanceSol: (await s.getBalance(pool)) / 1e9, unclaimedBondingCurveSol: v.bondingCurve / 1e9, unclaimedPumpSwapSol: v.amm / 1e9, opsBalanceSol: opsWallet ? (await s.getBalance(opsWallet)) / 1e9 : null };
   });
   // ?selftest=1: sign a callout with a throwaway key and run it through the real handler (never reaches the chain)
   let selftest = null;
