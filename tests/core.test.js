@@ -74,3 +74,17 @@ test("wins and ranks", () => {
   assert.ok(isWin(10000, 15000)); assert.ok(!isWin(10000, 14999)); assert.ok(!isWin(0, 1e9));
   assert.ok(wilson(8, 10) < 0.8 && wilson(8, 10) > 0.5); assert.equal(wilson(0, 0), 0);
 });
+
+test("callout score: holdings × PnL, whale cap, sellers get nothing", async () => {
+  const { calloutScore } = await import("../lib/payout.js");
+  const a = calloutScore({ tokensAtCall: 1e6, tokensNow: 1e6, mcAtCall: 10000, mcNow: 20000 }); // 0.1% held, +100%
+  assert.ok(Math.abs(a.holdPct - 0.1) < 1e-9); assert.ok(Math.abs(a.pnl - 1) < 1e-9);
+  assert.ok(Math.abs(a.score - Math.sqrt(0.1) * 2) < 1e-9);
+  const whale = calloutScore({ tokensAtCall: 5e7, tokensNow: 5e7, mcAtCall: 1, mcNow: 1 }); // 5% held -> capped at 1%
+  assert.equal(whale.holdPct, 1);
+  assert.equal(calloutScore({ tokensAtCall: 1e6, tokensNow: 0, mcAtCall: 1, mcNow: 9 }).score, 0); // sold out
+  const bought = calloutScore({ tokensAtCall: 1e6, tokensNow: 9e6, mcAtCall: 1, mcNow: 1 }); // buying more after the call doesn't count
+  assert.ok(Math.abs(bought.holdPct - 0.1) < 1e-9);
+  assert.equal(calloutScore({ tokensAtCall: 1e6, tokensNow: 1e6, mcAtCall: 100, mcNow: 50 }).pnl, 0); // losses floor at 0
+  assert.equal(calloutScore({ tokensAtCall: 1e6, tokensNow: 1e6, mcAtCall: 1, mcNow: 100 }).pnl, 4); // capped at +400%
+});

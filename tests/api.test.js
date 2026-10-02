@@ -85,3 +85,18 @@ test("cron tick: runs end to end with the secret on an empty database", async ()
   assert.ok("confirmed" in r.body && "mc" in r.body);
   assert.equal((await call(cron, { method: "GET", query: { job: "nope" }, headers: { authorization: "Bearer " + "s".repeat(40) } })).status, 404);
 });
+
+test("callout: must sign, must hold the coin, one per round", async () => {
+  const { default: callout } = await import("../api/callout.js");
+  const mint = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
+  T.coins.push({ mint, ticker: "TEST", confirmed: true, mc: 5000 });
+  const body = () => ({ mint, ...signed(["Exposure callout", `Coin: ${mint}`, `Wallet: ${rater.publicKey}`, `Time: ${new Date().toISOString()}`]) });
+  expoBal = 10; let r = await call(callout, { body: body() });
+  assert.equal(r.status, 403); assert.match(r.body.error, /Hold at least/);
+  T.callouts.length = 0; expoBal = 2_000_000; r = await call(callout, { body: body() });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.ok(r.body.holdPct > 0);
+  assert.equal(T.callouts.at(-1).platform, "exposure");
+  const wrongCoin = body(); wrongCoin.mint = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA";
+  assert.equal((await call(callout, { body: wrongCoin })).status, 401);
+  expoBal = 10;
+});

@@ -4,10 +4,11 @@
 //   /api/cron/payout  pay any pool at 1 SOL+ (only when PAYOUTS_ENABLED=1; otherwise a dry run that shows what it would send)
 import { db, eq } from "../../lib/db.js";
 import { send, guard, cronAuthorized, paused } from "../../lib/http.js";
-import { allCallouts, marketCaps } from "../../lib/sources.js";
-import { planPayout, isWin, LAMPORTS } from "../../lib/payout.js";
+import { currentMcUsd } from "../../lib/mc.js";
+import { tokenBalance } from "../../lib/rpc.js";
+import { planPayout, isWin, LAMPORTS, calloutScore } from "../../lib/payout.js";
 import { rpc } from "../../lib/rpc.js";
-import { claimFees, balance, sendFromPool, vaultBalances, curveMarketCaps } from "../../lib/chain.js";
+import { claimFees, balance, sendFromPool, vaultBalances } from "../../lib/chain.js";
 
 const RENT_KEEP = 2_000_000; // leave a little in each pool wallet for rent + network fees
 
@@ -21,21 +22,21 @@ async function tick() {
   }
   // 2) market caps + history
   const coins = await db.select("coins", "confirmed=eq.true&select=mint&limit=1000");
-  // on-curve coins: read pump.fun's bonding curve directly; graduated coins: DexScreener
   const mints = coins.map(c => c.mint);
-  const solUsd = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd").then(r => r.json()).then(j => +j.solana.usd || 0).catch(() => 0);
-  const curve = await curveMarketCaps(mints).catch(() => ({}));
-  const mcs = {};
-  for (const [m, v] of Object.entries(curve)) if (!v.complete && solUsd) mcs[m] = Math.round(v.mcSol * solUsd);
-  const rest = mints.filter(m => !(m in mcs));
-  if (rest.length) Object.assign(mcs, await marketCaps(rest));
+  const mcs = await currentMcUsd(mints);
   const t = new Date().toISOString();
   const hist = Object.entries(mcs).map(([mint, mc]) => ({ mint, t, mc }));
   if (hist.length) { await db.insert("mc_history", hist); out.mc = hist.length; }
   for (const [mint, mc] of Object.entries(mcs)) await db.update("coins", `mint=${eq(mint)}`, { mc });
-  // 3) new callouts (none until a source is approved — see lib/sources.js)
-  const fresh = await allCallouts(coins.map(c => c.mint));
-  if (fresh.length) { await db.insert("callouts", fresh, { upsert: true, onConflict: "id" }); out.callouts = fresh.length; }
+  // 3) refresh every open Exposure callout: caller's holdings now, coin's PnL since the call, score
+  const live = await db.select("callouts", "round_paid_at=is.null&platform=eq.exposure&limit=2000");
+  for (const k of live) {
+    const now = await tokenBalance(k.wallet, k.mint).catch(() => null);
+    if (now === null) continue;
+    const s = calloutScore({ tokensAtCall: +k.tokens_at_call, tokensNow: now, mcAtCall: +k.mc_at_call, mcNow: mcs[k.mint] || 0 });
+    await db.update("callouts", `id=${eq(k.id)}`, { tokens_now: now, pnl: mcs[k.mint] ? +s.pnl.toFixed(4) : k.pnl, weight: s.score });
+    out.callouts++;
+  }
   // 4) peak within 24h, and the win/loss verdict once 24h have passed
   const open = await db.select("callouts", `won=is.null&posted_at=gt.${new Date(Date.now() - 3 * 864e5).toISOString()}&limit=2000`);
   for (const c of open) {
@@ -79,7 +80,7 @@ async function payout() {
     const stuck = await db.select("payout_rounds", `mint=${eq(c.mint)}&status=in.(sending,failed)&limit=1`);
     if (stuck.length) { out.push({ mint: c.mint, skipped: "needs_review", round: stuck[0].id }); continue; }
     const pool = Math.max(0, (await balance(c.pool_wallet)) - RENT_KEEP);
-    const entries = (await db.select("callouts", `mint=${eq(c.mint)}&round_paid_at=is.null&limit=1000`)).map(k => ({ w: k.wallet, pl: k.platform, n: 1, wt: +k.weight, likes: k.holder_likes }));
+    const entries = (await db.select("callouts", `mint=${eq(c.mint)}&round_paid_at=is.null&limit=1000`)).map(k => ({ w: k.wallet, pl: k.platform, n: 1, wt: +k.weight, likes: 0, hold: Math.min(+k.tokens_at_call || 0, +k.tokens_now || 0) / 1e7, pnl: +k.pnl || 0 }));
     // merge multiple callouts by the same wallet+platform into one line with n = count
     const merged = new Map(); for (const e of entries) { const k = e.w + e.pl, m = merged.get(k); if (m) { m.n++; m.wt += e.wt; m.likes += e.likes; } else merged.set(k, { ...e }); }
     const plan = planPayout(pool, [...merged.values()]);
@@ -94,9 +95,9 @@ async function payout() {
     try { round = (await db.insert("payout_rounds", [{ mint: c.mint, round_no: roundNo, pool_lamports: pool, plan, status: "sending" }]))[0]; }
     catch (e) { out.push({ mint: c.mint, skipped: "round_exists" }); continue; }
     await db.update("coins", `mint=${eq(c.mint)}`, { round_no: roundNo });
-    const lines = [...plan.sends.map(s => ({ to: s.w, lamports: s.lamports, kind: "payout", pl: s.pl, likes: (merged.get(s.w + s.pl) || {}).likes || 0 })),
+    const lines = [...plan.sends.map(s => ({ to: s.w, lamports: s.lamports, kind: "payout", pl: s.pl, hold: (merged.get(s.w + s.pl) || {}).hold || 0, pnl: (merged.get(s.w + s.pl) || {}).pnl || 0 })),
       { to: TOP20_WALLET, lamports: plan.top20, kind: "top20" }, { to: RESERVE_WALLET, lamports: plan.reserve, kind: "reserve" }];
-    await db.insert("payouts", lines.map(l => ({ round_id: round.id, mint: c.mint, wallet: l.to, platform: l.pl || null, likes: l.likes || null, lamports: l.lamports, kind: l.kind })));
+    await db.insert("payouts", lines.map(l => ({ round_id: round.id, mint: c.mint, wallet: l.to, platform: l.pl || null, hold_pct: l.hold || null, pnl: l.pnl ?? null, lamports: l.lamports, kind: l.kind })));
     try {
       const sigs = await sendFromPool(c.mint, lines);
       for (const { sig, batch } of sigs) for (const l of batch) {
