@@ -1,7 +1,8 @@
 import { db } from "../../lib/db.js";
 import { isAddress } from "../../lib/keys.js";
 import { send, allow, guard, sameOrigin, limited, paused } from "../../lib/http.js";
-import { buildLaunchTx } from "../../lib/chain.js";
+import { buildLaunchTx, MAX_DEV_BUY_LAMPORTS } from "../../lib/chain.js";
+import { getBalance } from "../../lib/sol.js";
 
 const MAX_BODY = 2.5 * 1024 * 1024, MAX_IMG = 2 * 1024 * 1024;
 
@@ -43,7 +44,13 @@ export default guard(async (req, res) => {
   if (!isAddress(creator)) return send(res, 400, { error: "Connect your wallet first." });
   if (twitter && !/^(https:\/\/(x|twitter)\.com\/[A-Za-z0-9_]{1,15}(\/status\/\d+)?\/?|@?[A-Za-z0-9_]{1,15})$/.test(twitter)) return send(res, 400, { error: "That X link doesn't look right." });
   if (f("quote") && f("quote") !== "SOL") return send(res, 400, { error: "Stock pairs open soon. Pick SOL for now." });
-  if (Number(f("devBuy") || 0) > 0) return send(res, 400, { error: "Dev buys open soon. Set it to 0 for now and buy right after launch." });
+  const devBuy = Number(f("devBuy") || 0);
+  if (!Number.isFinite(devBuy) || devBuy < 0 || devBuy > MAX_DEV_BUY_LAMPORTS / 1e9) return send(res, 400, { error: `Dev buys can be 0 to ${MAX_DEV_BUY_LAMPORTS / 1e9} SOL.` });
+  const devBuyLamports = Math.floor(devBuy * 1e9);
+  if (devBuyLamports > 0 && devBuyLamports < 1e6) return send(res, 400, { error: "The smallest dev buy is 0.001 SOL." });
+  // launching costs ~0.025 SOL in rent + fees on top of the dev buy
+  const bal = await getBalance(creator).catch(() => null);
+  if (bal !== null && bal < devBuyLamports + 30_000_000) return send(res, 400, { error: `Your wallet has ${(bal / 1e9).toFixed(3)} SOL. This launch needs about ${((devBuyLamports + 30_000_000) / 1e9).toFixed(3)} SOL${devBuyLamports ? " including your dev buy" : ""}.` });
 
   const img = form.get("image");
   if (!img || typeof img.arrayBuffer !== "function" || img.size > MAX_IMG) return send(res, 400, { error: "Add an image under 2 MB." });
@@ -56,7 +63,7 @@ export default guard(async (req, res) => {
   const uri = await pin(new Blob([JSON.stringify(meta)], { type: "application/json" }), "metadata.json");
   if (uri.length > 200) return send(res, 500, { error: "server" });
 
-  const built = await buildLaunchTx({ user: creator, name, symbol: ticker, uri });
+  const built = await buildLaunchTx({ user: creator, name, symbol: ticker, uri, devBuyLamports });
   await db.insert("coins", [{ mint: built.mint, ticker, name, img: imageUrl, description, twitter: tw || null, quote: "SOL", fee_pct: 0.3, creator, pool_wallet: built.poolWallet }]);
   send(res, 200, { tx: built.tx, mint: built.mint });
 });
