@@ -320,6 +320,10 @@ small{font-size:12px}
 @media (max-aspect-ratio:3/4){.intro{background:#0b0603}.intro .introBg{display:none}.intro #introVid{left:0;transform:none;width:100%;height:100%;object-fit:contain;-webkit-mask-image:none;mask-image:none}}
 .intro .skip{position:absolute;right:16px;top:calc(16px + env(safe-area-inset-top,0px));min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--muted);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
 .intro .skip:hover{color:var(--ink)}
+.callForm{display:grid;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.callForm label{display:grid;gap:6px;font-size:14px;color:var(--muted)}
+.callForm .opt{color:var(--muted);opacity:.7}
+.callForm input{min-height:44px}
 .intro .introTap{position:absolute;left:50%;bottom:calc(14% + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 24px;border-radius:999px;border:1px solid rgba(255,164,92,.5);background:rgba(26,18,14,.85);color:var(--ink);font:600 16px/1 inherit;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 .intro .introTap svg{width:18px;height:18px;fill:currentColor}
 .intro .introTap:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
@@ -803,7 +807,7 @@ footer a{color:inherit}
   <section class="view" id="v-explore">
     <div class="hero">
       <h1>Expose a coin.<br>Get <em>Exposure</em>.</h1>
-      <p>Every coin launched on Exposure sends its creator fees to the holders who call it out. Hold the coin, post a callout, and you're in. More holder likes means a bigger cut of the pool.</p>
+      <p>Every coin launched on Exposure sends its creator fees to the holders who call it out. Hold the coin, call it out on Exposure, and you're in. The more you hold and the more it pumps after your call, the bigger your cut of the pool.</p>
       <div class="cta">
         <a class="btn sig" href="#launch">Launch a coin <span class="arr" aria-hidden="true">→</span></a>
       </div>
@@ -914,8 +918,8 @@ footer a{color:inherit}
   <section class="view" id="v-leaderboard" hidden>
     <div>
       <div class="sec-head">
-        <div><div class="eyebrow">Best callouts</div><h1 style="font-size:clamp(28px,4vw,44px);margin-top:8px">The callouts that reached the most holders</h1>
-        <p>Every callout across every Exposure coin, ranked by what it earned. Earnings come from holder likes, compared within each platform.</p></div>
+        <div><div class="eyebrow">Best callouts</div><h1 style="font-size:clamp(28px,4vw,44px);margin-top:8px">The callouts that paid the most</h1>
+        <p>Every callout across every Exposure coin, ranked by what it earned. Earnings come from how much the caller holds and how much the coin gained after the call.</p></div>
       </div>
       <div class="filters">
         <div class="toolbar" role="group" aria-label="Time period" id="bcPeriod">
@@ -923,17 +927,12 @@ footer a{color:inherit}
           <button class="chip" type="button" data-p="week" aria-pressed="false">This week</button>
           <button class="chip" type="button" data-p="all" aria-pressed="false">All time</button>
         </div>
-        <div class="toolbar" role="group" aria-label="Platform" id="bcPlat">
-          <button class="chip" type="button" data-pl="all" aria-pressed="true">All platforms</button>
-          <button class="chip" type="button" data-pl="pump" aria-pressed="false">pump.fun</button>
-          <button class="chip" type="button" data-pl="fomo" aria-pressed="false">Fomo</button>
-          <button class="chip" type="button" data-pl="gmgn" aria-pressed="false">GMGN</button>
-        </div>
+        <div id="bcPlat" hidden></div>
       </div>
       <div class="podium" id="podium"></div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>#</th><th>Caller</th><th>Coin</th><th>Platform</th><th class="num">Callouts</th><th class="num">Holder likes</th><th>Score</th><th class="num">Earned</th></tr></thead>
+          <thead><tr><th>#</th><th>Caller</th><th>Coin</th><th class="num">Holding</th><th class="num">PnL</th><th>Score</th><th class="num">Earned</th></tr></thead>
           <tbody id="bcRows"></tbody>
         </table>
       </div>
@@ -941,12 +940,12 @@ footer a{color:inherit}
     <div>
       <div class="sec-head">
         <div><div class="eyebrow">Current rounds</div><h2 style="margin-top:8px">Leaderboard by coin</h2>
-        <p>Estimated split when this coin's pool reaches 1 SOL. Callouts posted since its last payout count, and more callouts raise your weight.</p></div>
+        <p>Estimated split when this coin's pool reaches 1 SOL. Callouts posted since its last payout count, scored by holding and PnL.</p></div>
       </div>
       <div class="toolbar" role="group" aria-label="Pick a coin" id="boardTabs" style="margin-bottom:12px"></div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>#</th><th>Caller</th><th>Platform</th><th class="num">Callouts</th><th class="num">Holder likes</th><th class="num">Bonus</th><th>Score</th><th class="num">Est. payout</th></tr></thead>
+          <thead><tr><th>#</th><th>Caller</th><th class="num">Holding</th><th class="num">PnL</th><th>Score</th><th class="num">Est. payout</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
@@ -954,7 +953,7 @@ footer a{color:inherit}
     <div class="two">
       <div class="card" id="submit">
         <h2 style="margin-bottom:8px">Check my callouts</h2>
-        <p style="color:var(--muted);margin:0 0 16px">Callouts enter automatically. Hold the coin, post a callout on pump.fun or Fomo, and Exposure finds it and pays the wallet that posted it. Paste your wallet to see your entries.</p>
+        <p style="color:var(--muted);margin:0 0 16px">Hold the coin, open its page and tap Call out. Your wallet signs it, and payouts go straight to that wallet. Paste your wallet to see your entries.</p>
         <form id="f" novalidate>
           <label for="fWallet">Your wallet<input id="fWallet" placeholder="Solana address" autocomplete="off"></label>
           <button class="btn" type="submit">Check callouts</button>
@@ -965,19 +964,15 @@ footer a{color:inherit}
       <div class="card">
         <h2 style="margin-bottom:12px">Rules</h2>
         <ul class="rules">
-          <li><b>Top 20 bonus.</b> 10% of every payout on every coin goes to the top 20 callers in the ring. They're ranked by biggest % gain on their calls, then most likes, then callouts entered, which counts the least. #1 gets the biggest share, down to #20.</li>
-          <li><b>Automatic entry.</b> Every callout from a wallet holding the coin enters on its own. No links to paste.</li>
-          <li><b>Hold to count.</b> Your wallet holds the coin when you post and at payout.</li>
-          <li><b>Holder likes only.</b> Likes from empty wallets and self-likes score zero.</li>
-          <li><b>Whale cap.</b> A liker's weight tops out at 1% of supply.</li>
-          <li><b>More callouts, more weight.</b> Each extra callout in a round adds 25% to your score, up to 1.75× at 4 callouts. A callout needs at least 3 holder likes to count.</li>
+          <li><b>Call out on Exposure.</b> Open a coin's page and tap Call out. Your wallet signs it, and you need at least 100,000 tokens (0.01% of supply).</li>
+          <li><b>One callout per coin per round.</b> It stays in until that coin's next payout.</li>
+          <li><b>Holding.</b> Counts the lower of what you held when you called and what you hold now. Buying more later doesn't add; selling lowers it, and selling out drops you to zero.</li>
+          <li><b>PnL.</b> How much the coin's market cap rose since your call. Losses count as 0%, gains count up to +400%.</li>
+          <li><b>Score = √holding × (1 + PnL).</b> Holding is capped at 1% of supply, so one whale can't take the whole pool.</li>
+          <li><b>Top 20 bonus.</b> 10% of every payout on every coin goes to the top 20 callers in the ring, ranked by the biggest % gain on their calls. #1 gets the biggest share, down to #20.</li>
           <li><b>0.5 SOL max</b> per wallet per payout. Anything over stays in the pool for the next round.</li>
         </ul>
-        <div class="legend">
-          <div><span>pump.fun <span class="pill live2">live</span></span><b>45%</b></div>
-          <div><span>Fomo <span class="pill live2">live</span></span><b>35%</b></div>
-          <div><span>GMGN <span class="pill pend">soon</span></span><b>20%</b></div>
-        </div>
+        
       </div>
     </div>
   </section>
@@ -1143,10 +1138,10 @@ footer a{color:inherit}
     <div class="terms">
       <section><h2>Nothing here is financial advice</h2><p>Exposure is a tool for launching coins and rewarding the people who promote them. Nothing on this site is investment, financial, legal or tax advice. Do your own research, and only spend what you can afford to lose.</p></section>
       <section><h2>Memecoins are extremely risky</h2><p>Most coins lose most or all of their value, often within hours. Prices can move very fast, liquidity can disappear, and anyone can launch a coin. A coin being on Exposure doesn't mean we checked it, vouch for it, or know who made it.</p></section>
-      <section><h2>Payouts aren't guaranteed</h2><p>Payouts only happen when a coin earns enough creator fees for its pool to reach 1 SOL. A coin with little trading may never pay out. Your share depends on holder likes compared with other callers, so estimates on this site can change until a payout is sent.</p></section>
-      <section><h2>We rely on other services</h2><p>Coins are created and traded on pump.fun. Like counts come from pump.fun, Fomo and GMGN. If any of them change, go down or stop sharing data, scoring and payouts may be delayed, paused or changed. Tokenized stocks used as pairs are issued by third parties, and may not be available where you live.</p></section>
-      <section><h2>Fair play</h2><p>Faking likes, using many wallets to boost your own callouts, rating yourself, or otherwise gaming the system can get a wallet excluded from payouts, ranks and ratings. We may adjust the scoring rules to stop abuse. When we do, we'll announce it on X and update How it works.</p></section>
-      <section><h2>Your wallet, your responsibility</h2><p>Exposure never holds your coins and never asks for your seed phrase or private key. Connecting a wallet only shares your public address, and signing a rating message can't move funds. We will never DM you first. Anyone who does is not us.</p></section>
+      <section><h2>Payouts aren't guaranteed</h2><p>Payouts only happen when a coin earns enough creator fees for its pool to reach 1 SOL. A coin with little trading may never pay out. Your share depends on your holding and the coin's gain since your call compared with other callers, so estimates on this site can change until a payout is sent.</p></section>
+      <section><h2>We rely on other services</h2><p>Coins are created and traded on pump.fun, and prices come from pump.fun and DexScreener. If any of them change or go down, scoring and payouts may be delayed, paused or changed. Tokenized stocks used as pairs are issued by third parties, and may not be available where you live.</p></section>
+      <section><h2>Fair play</h2><p>Using many wallets to farm callouts, wash trading to fake gains, rating yourself, or otherwise gaming the system can get a wallet excluded from payouts, ranks and ratings. We may adjust the scoring rules to stop abuse. When we do, we'll announce it on X and update How it works.</p></section>
+      <section><h2>Your wallet, your responsibility</h2><p>Exposure never holds your coins and never asks for your seed phrase or private key. Connecting a wallet only shares your public address, and signing a callout or rating message can't move funds. We will never DM you first. Anyone who does is not us.</p></section>
       <section><h2>Taxes and local laws</h2><p>You're responsible for following the laws where you live and for any taxes on coins you buy or SOL you receive.</p></section>
       <section><h2>No warranty</h2><p>Exposure is provided as it is, without any guarantee that it will be available, accurate or free of bugs. To the extent the law allows, we aren't liable for losses from using the site, trading coins, or relying on anything shown here.</p></section>
       <section><h2>Changes</h2><p>We may update these terms. The date at the top shows the latest version.</p></section>
@@ -1178,19 +1173,20 @@ footer a{color:inherit}
     <div class="sec-head"><div><div class="eyebrow">How it works</div><h1 style="font-size:clamp(26px,3.6vw,36px);margin-top:8px">One loop, on repeat</h1></div></div>
     <div class="grid g4">
       <div class="card"><div class="eyebrow" style="color:var(--signal)">1 · Launch</div><h3 style="font-size:16px;margin:8px 0 6px">Coin goes live</h3><p style="color:var(--muted);margin:0;font-size:14px">Anyone launches on pump.fun through Exposure. That coin's creator fees fill its own pool.</p></div>
-      <div class="card"><div class="eyebrow" style="color:var(--signal)">2 · Call it</div><h3 style="font-size:16px;margin:8px 0 6px">Post a callout</h3><p style="color:var(--muted);margin:0;font-size:14px">Holders call the coin on pump.fun, Fomo or GMGN. Exposure picks it up automatically.</p></div>
-      <div class="card"><div class="eyebrow" style="color:var(--signal)">3 · Get liked</div><h3 style="font-size:16px;margin:8px 0 6px">Reach is scored</h3><p style="color:var(--muted);margin:0;font-size:14px">Only likes from holders count, weighted by bag size and capped per liker.</p></div>
+      <div class="card"><div class="eyebrow" style="color:var(--signal)">2 · Call it</div><h3 style="font-size:16px;margin:8px 0 6px">Post a callout</h3><p style="color:var(--muted);margin:0;font-size:14px">Holders open the coin on Exposure and tap Call out. Their wallet signs it, nothing is paid.</p></div>
+      <div class="card"><div class="eyebrow" style="color:var(--signal)">3 · Hold and pump</div><h3 style="font-size:16px;margin:8px 0 6px">Calls are scored</h3><p style="color:var(--muted);margin:0;font-size:14px">Your score is your holding (capped at 1% of supply) times how much the coin gained since your call.</p></div>
       <div class="card"><div class="eyebrow" style="color:var(--signal)">4 · Get paid</div><h3 style="font-size:16px;margin:8px 0 6px">Pool splits</h3><p style="color:var(--muted);margin:0;font-size:14px">Every time a coin's pool reaches 1 SOL, 70% pays that round's callers by score, 10% goes to the Top 20 bonus and 20% goes to the $EXPO buyback reserve.</p></div>
     </div>
     <div class="faq">
-      <details><summary>What is the Top 20 bonus?</summary><p>10% of every payout across all coins builds a bonus pool for the top 20 callers on Exposure. They're scored 45% on the biggest % gain from their calls, 40% on likes and 15% on how many callouts they entered. It pays out on top of their normal earnings, weighted by rank: #1 gets 20 shares, #2 gets 19, down to #20 with 1 share.</p></details>
+      <details><summary>What is the Top 20 bonus?</summary><p>10% of every payout across all coins builds a bonus pool for the top 20 callers on Exposure. They're ranked by the biggest % gain from their calls in the last 7 days. It pays out on top of their normal earnings, weighted by rank: #1 gets 20 shares, #2 gets 19, down to #20 with 1 share.</p></details>
       <details><summary>When do payouts happen?</summary><p>Every time a coin's pool reaches 1 SOL from creator fees. Busy coins pay out many times a day; quiet coins pay out when they get there. Each payout covers the callouts posted since the last one.</p></details>
-      <details><summary>Do more callouts earn more?</summary><p>Yes. Your score from holder likes gets a bonus for each extra callout you post in a round: 1.25× for 2, 1.5× for 3 and 1.75× for 4 or more. Only callouts with at least 3 holder likes count, so spamming empty posts does nothing.</p></details>
-      <details><summary>Do I need to connect a wallet?</summary><p>Not to earn. Your callout is tied to the wallet that posted it, so Exposure enters it and pays that wallet automatically, and you never paste a link. You connect a wallet only to launch a coin (your wallet signs and pays for it), to rate callers, to link your X account, or to see everything in one place on My Exposure. Connecting shares your public address only. It can't move funds.</p></details>
+      <details><summary>How is my share worked out?</summary><p>Score = √holding × (1 + PnL). Holding is the lower of what you held when you called and what you hold now, as a % of supply, capped at 1%. PnL is how much the coin's market cap rose since your call: losses count as 0% and gains count up to +400%. Your share of the 70% is your score divided by everyone's score in that round, capped at 0.5 SOL per payout.</p></details>
+      <details><summary>Can I call out more than once?</summary><p>One callout per coin per round. It stays in until that coin's next payout, then you can call it again. You can call out as many different coins as you like.</p></details>
+      <details><summary>Do I need to connect a wallet?</summary><p>Yes, to call out. Your wallet signs the callout (a free message, nothing is sent) so we know it's really you and where to send your payout. You also connect to launch a coin, to rate callers, or to see everything on My Exposure. Connecting shares your public address only. It can't move funds.</p></details>
       <details><summary>What's on my caller profile?</summary><p>Every caller gets a public profile with their rank, rating, win rate, best call, earnings, star rating from holders, open callouts and payouts. Click any name on the site to open it.</p></details>
-      <details><summary>Why do only holder likes count?</summary><p>Anyone can make empty wallets and like their own post. Counting only wallets that hold the coin means faking likes costs real money, and every fake buy helps holders anyway.</p></details>
-      <details><summary>What's the whale cap?</summary><p>A like is weighted by the liker's bag, but any bag above 1% of supply counts the same as 1%. One big holder can't decide the whole payout.</p></details>
-      <details><summary>Why compare scores within each platform?</summary><p>Twenty likes means something different on pump.fun than on Fomo. Each callout is compared to that platform's average for the day before the platform weights apply.</p></details>
+      <details><summary>Why holdings and PnL?</summary><p>Both cost real money to fake. To score, you have to actually hold the coin, and your call only earns more if the coin really goes up after it. Every buy that pushes a coin up helps every holder anyway.</p></details>
+      <details><summary>What's the whale cap?</summary><p>Any bag above 1% of supply counts the same as 1%, and holdings are square-rooted, so a bag 4× bigger scores 2× more. One big holder can't take the whole payout.</p></details>
+      <details><summary>Can I call out on pump.fun or X too?</summary><p>Post wherever you like, and use the share link to send people to the coin. Only callouts made on Exposure count toward payouts, because they're signed by your wallet.</p></details>
       <details><summary>How do caller stars work?</summary><p>Anyone holding an Exposure coin can rate a ranked caller from 1 to 5 stars. Each wallet gets one rating per caller and can change it later. You prove the wallet is yours by signing a free message, so nothing is sent. Stars show once a caller has at least 3 ratings. They're separate from a caller's rank, which comes only from how their calls actually did.</p></details>
       <details><summary>Can I pair my coin with a stock?</summary><p>Yes. pump.fun's Custom Pairs let a coin trade against tokenized stocks like Nvidia or Tesla, against BTC or ETH, or against SOL and USDC. Pick the pair when you launch. Creator fees are collected in that asset, so a coin paired with Nvidia fills its pool with tokenized Nvidia and pays its callers in it. Custom pairs also let you set the creator fee anywhere from 0.05% to 1%.</p></details>
       <details><summary>How does a stock-paired pool reach 1 SOL?</summary><p>The pool pays out when it's worth 1 SOL at the current price, whatever asset it holds. Callers and the Top 20 are paid in the paired asset. The 20% reserve share is swapped to SOL for the $EXPO buyback.</p></details>

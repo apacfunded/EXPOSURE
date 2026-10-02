@@ -18,8 +18,8 @@ let DEMO_ON=false,demoTimer=null,DEMO_ME=null,XIDX={};
 // ===== security: clean everything the server sends before it touches the page =====
 // Numbers become real numbers, enums are checked against allowed values, image URLs must be https (or a safe data: image),
 // and anything else is forced to a plain string. Rendering code then escapes strings as before.
-const NUMK=new Set(["pool","mc","calls","paid","fee","createdAt","at","t","sol","likes","hl","n","wt","sc","earned","calls30","wins","wins30","avgPeak","bestX","avgPeak30","bestX30","earned30","stars","starsN","streak","gain","entered","balance","added","total","claimed","callers","top20","reserve","solUsd","top20Pool","paidTotal","xp","launchedAt","burned"]);
-const ENUMK={pl:["pump","fomo","gmgn"],kind:["claim","payout","top20","reserve","burn","std","stock","crypto"]};
+const NUMK=new Set(["hold","pnl","pool","mc","calls","paid","fee","createdAt","at","t","sol","likes","hl","n","wt","sc","earned","calls30","wins","wins30","avgPeak","bestX","avgPeak30","bestX30","earned30","stars","starsN","streak","gain","entered","balance","added","total","claimed","callers","top20","reserve","solUsd","top20Pool","paidTotal","xp","launchedAt","burned"]);
+const ENUMK={pl:["exposure","pump","fomo","gmgn"],kind:["claim","payout","top20","reserve","burn","std","stock","crypto"]};
 const IMGK=new Set(["img","avatar"]);
 function safeImg(u){u=String(u||"");if(/^https:\/\/[^\s"'<>]+$/i.test(u))return u;if(/^data:image\/(png|jpe?g|gif|webp|svg\+xml)[;,]/i.test(u)&&u.length<200000)return u;return ""}
 function clean(v,k,depth=0){
@@ -61,16 +61,17 @@ function checkLaunchTx(vtx,me){
   return null;
 }
 
-const W={pump:.45,fomo:.35,gmgn:.20},CAP=.5,THRESH=1,BONUS=n=>Math.min(1+.25*(n-1),1.75),NAMES={pump:"pump.fun",fomo:"Fomo",gmgn:"GMGN"};
+const W={exposure:1,pump:.45,fomo:.35,gmgn:.20},CAP=.5,THRESH=1,BONUS=n=>Math.min(1+.25*(n-1),1.75),NAMES={exposure:"Exposure",pump:"pump.fun",fomo:"Fomo",gmgn:"GMGN"};
+const fHold=x=>{const v=+x.hold||0;return v>=0.01?v.toFixed(2)+"%":v>0?"<0.01%":"0%"},fPnl=x=>{const v=+x.pnl||0;return (v>=0?"+":"")+Math.round(v)+"%"},callLine=x=>`${fHold(x)} held · ${fPnl(x)} since call`;
 const COLORS=["#3c7d0e","#5f8f10","#0e6a4c","#2f6b1a","#7a9a12","#14553a","#4d7a0a","#21602a"];
 const colFor=s=>COLORS[[...String(s)].reduce((a,c)=>a+c.charCodeAt(0),0)%COLORS.length];
 /* Shape returned by {api}/state:
   coins:   [{mint,t,n,img,mc,pool,calls,createdAt,paid}]          pool/paid in SOL, createdAt ms
-  round:   {MINT:[{u,w,pl,n,likes,hl,wt}]}                        callouts since that coin's last payout
-  callouts:[{u,w,coin,pl,n,likes,hl,sc,earned,at}]               scored callouts (leaderboard)
+  round:   {MINT:[{u,w,pl,n,hold,pnl,wt,at,note}]}                 callouts since that coin's last payout (hold = % of supply, pnl = %)
+  callouts:[{u,w,coin,pl,n,hold,pnl,sc,earned,at,note}]           scored callouts (leaderboard)
   callers: [{u,w,earned,calls,wins,avgPeak,bestX,calls30,wins30,avgPeak30,bestX30,earned30}]
-  payouts: [{u,w,coin,sol,pl,likes,at,tx}]
-  top20:   [{u,w,tick,gain,likes,entered}]   top20Pool: SOL
+  payouts: [{u,w,coin,sol,pl,hold,pnl,at,tx}]
+  top20:   [{u,w,tick,gain,hold,entered}]   top20Pool: SOL
   reserve: {balance,history:[{at,added,total}]}   solUsd: number */
 let D={coins:[],round:{},callouts:[],callers:[],payouts:[],top20:[],top20Pool:0,reserve:{balance:0,history:[]},solUsd:0,live:false};
 const $id=id=>document.getElementById(id);
@@ -89,7 +90,7 @@ const coinBy=k=>D.coins.find(c=>c.mint===k||c.t===k);
 
 // payouts
 const ago=ms=>{const m=Math.max(0,Math.round((Date.now()-ms)/6e4));return m<60?m+"m ago":m<1440?Math.floor(m/60)+"h ago":Math.floor(m/1440)+"d ago"};
-const payRow=x=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay">${avatar(x.u)}<div class="t"><b>${uL(x.u,x.w)} · $${esc(c.t)}</b><span>${x.pl==="gmgn"?"Verified call on GMGN":(x.likes|0)+" holder likes on "+NAMES[x.pl]} · ${ago(x.at)}</span></div>
+const payRow=x=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay">${avatar(x.u)}<div class="t"><b>${uL(x.u,x.w)} · $${esc(c.t)}</b><span>${callLine(x)} · ${ago(x.at)}</span></div>
   <div class="amt">+${(+x.sol).toFixed(3)} SOL${D.solUsd?`<small>$${(x.sol*D.solUsd).toFixed(2)}</small>`:""}</div>${shareBtn(x)}<a class="tx" href="https://solscan.io/tx/${encodeURIComponent(x.tx)}" target="_blank" rel="noopener">${esc(shortW(x.tx))} ↗</a></div>`};
 function renderPays(){
   const p=D.payouts;
@@ -313,14 +314,14 @@ let boardCoin=null;
 function renderBoard(k){
   if(k)boardCoin=k;const c=coinBy(boardCoin)||D.coins[0];
   $id("boardTabs").innerHTML=D.coins.map(x=>`<button class="chip" type="button" data-tab="${esc(x.mint)}" aria-pressed="${c&&x.mint===c.mint}">$${esc(x.t)}</button>`).join("");
-  if(!c){$id("rows").innerHTML=emptyRow(8,"No coins yet. Once a coin launches, its callers and their estimated payouts show here.");return}
+  if(!c){$id("rows").innerHTML=emptyRow(6,"No coins yet. Once a coin launches, its callers and their estimated payouts show here.");return}
   const rows=score((D.round[c.mint]||[]).map(r=>({...r})),THRESH),max=rows[0]?.sc||1;
-  $id("rows").innerHTML=rows.length?rows.map((r,i)=>{const g=r.pl==="gmgn";return`<tr>
-   <td>${i+1}</td><td><span class="cwho">${avatar(r.u)}${uL(r.u,r.w)}</span></td><td><span class="plat">${NAMES[r.pl]}</span></td>
-   <td class="num">${r.n}</td><td class="num">${g?"—":r.hl}</td><td class="num">${r.bonus.toFixed(2)}×</td>
+  $id("rows").innerHTML=rows.length?rows.map((r,i)=>{return`<tr>
+   <td>${i+1}</td><td><span class="cwho">${avatar(r.u)}${uL(r.u,r.w)}</span></td>
+   <td class="num">${fHold(r)}</td><td class="num">${fPnl(r)}</td>
    <td><span class="meter"><i style="width:${(r.sc/max*100).toFixed(0)}%"></i></span><span class="mono" style="font-size:12px">${r.sc.toFixed(2)}</span></td>
    <td class="num">${r.pay.toFixed(3)} SOL${r.cap?'<span class="capped">capped</span>':''}</td></tr>`}).join("")
-   :emptyRow(8,`No callouts for $${esc(c.t)} this round yet. Hold it and post a callout on pump.fun or Fomo to get in.`);
+   :emptyRow(6,`No callouts for $${esc(c.t)} this round yet. Hold it, open its page and tap Call out to get in.`);
 }
 $id("boardTabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(b)renderBoard(b.dataset.tab)});
 $id("coinGrid").addEventListener("click",e=>{const board=e.target.closest("[data-board]");if(board){renderBoard(board.dataset.board);go("leaderboard")}});
@@ -345,24 +346,24 @@ function renderStats(){
 let bcP="today",bcPl="all";
 function bestCallouts(period){
   const now=Date.now(),span={today:864e5,week:6048e5,all:Infinity}[period];
-  return D.callouts.filter(x=>now-x.at<=span).sort((a,b)=>(b.earned-a.earned)||(b.hl-a.hl)||(b.sc-a.sc));
+  return D.callouts.filter(x=>now-x.at<=span).sort((a,b)=>(b.earned-a.earned)||(b.sc-a.sc)||(b.pnl-a.pnl));
 }
 function renderBest(){
   const list=bestCallouts(bcP).filter(x=>bcPl==="all"||x.pl===bcPl);
   $id("podium").innerHTML=list.slice(0,3).map((x,i)=>{const c=coinBy(x.coin)||{t:x.coin};return `<article class="pod${i===0?" first":""}"><span class="num" aria-hidden="true">${i+1}</span>
-    <div class="who">${avatar(x.u,null,"lg")}<div><b>${uL(x.u,x.w)}</b><span>$${esc(c.t)} · ${NAMES[x.pl]}</span></div></div>
-    <div class="hl">${x.pl==="gmgn"?"Called":x.hl}<small>${x.pl==="gmgn"?"verified on GMGN":"holder likes"}</small></div>
-    <div class="foot"><span>${x.n} callout${x.n>1?"s":""} · ${x.pl==="gmgn"?"flat score":x.likes+" likes"}</span><b>+${(+x.earned).toFixed(3)} SOL</b></div></article>`}).join("")
-    ||empty(bcPl==="all"?"No callouts yet for this period.":`No ${NAMES[bcPl]} callouts yet for this period.`);
+    <div class="who">${avatar(x.u,null,"lg")}<div><b>${uL(x.u,x.w)}</b><span>$${esc(c.t)} · ${fHold(x)} held</span></div></div>
+    <div class="hl">${fPnl(x)}<small>since the call</small></div>
+    <div class="foot"><span>score ${(+x.sc).toFixed(2)}</span><b>+${(+x.earned).toFixed(3)} SOL</b></div></article>`}).join("")
+    ||empty("No callouts yet for this period.");
   const max=list[0]?.sc||1;
-  $id("bcRows").innerHTML=list.length>3?list.slice(3,28).map((x,i)=>{const g=x.pl==="gmgn",c=coinBy(x.coin)||{t:x.coin};return`<tr>
-    <td>${i+4}</td><td><span class="cwho">${avatar(x.u)}${uL(x.u,x.w)}</span></td><td class="mono">$${esc(c.t)}</td><td><span class="plat">${NAMES[x.pl]}</span></td>
-    <td class="num">${x.n}</td><td class="num">${g?"—":x.hl}</td>
+  $id("bcRows").innerHTML=list.length>3?list.slice(3,28).map((x,i)=>{const c=coinBy(x.coin)||{t:x.coin};return`<tr>
+    <td>${i+4}</td><td><span class="cwho">${avatar(x.u)}${uL(x.u,x.w)}</span></td><td class="mono">$${esc(c.t)}</td>
+    <td class="num">${fHold(x)}</td><td class="num">${fPnl(x)}</td>
     <td><span class="meter"><i style="width:${Math.min(100,x.sc/max*100).toFixed(0)}%"></i></span><span class="mono" style="font-size:12px">${(+x.sc).toFixed(2)}</span></td>
-    <td class="num" style="color:var(--ok)">+${(+x.earned).toFixed(3)} SOL</td></tr>`}).join(""):emptyRow(8,list.length?"Positions 4 and down fill in as more callouts come in.":"The leaderboard fills in as soon as holders start posting callouts.");
+    <td class="num" style="color:var(--ok)">+${(+x.earned).toFixed(3)} SOL</td></tr>`}).join(""):emptyRow(7,list.length?"Positions 4 and down fill in as more callouts come in.":"The leaderboard fills in as soon as holders start posting callouts.");
   const today=bestCallouts("today");
-  $id("bestToday").innerHTML=today.length?today.slice(0,5).map((x,i)=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay best"><span class="rk">#${i+1}</span>${avatar(x.u)}<div class="t"><b>${uL(x.u,x.w)} · $${esc(c.t)}</b><span>${x.pl==="gmgn"?"Verified call on GMGN":x.hl+" holder likes on "+NAMES[x.pl]}</span></div><div class="amt">+${(+x.earned).toFixed(3)} SOL<small>today</small></div></div>`}).join("")
-    :empty("No callouts today yet. Hold an Exposure coin and post about it on pump.fun or Fomo.");
+  $id("bestToday").innerHTML=today.length?today.slice(0,5).map((x,i)=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay best"><span class="rk">#${i+1}</span>${avatar(x.u)}<div class="t"><b>${uL(x.u,x.w)} · $${esc(c.t)}</b><span>${callLine(x)}</span></div><div class="amt">+${(+x.earned).toFixed(3)} SOL<small>today</small></div></div>`}).join("")
+    :empty("No callouts today yet. Hold an Exposure coin, open its page and tap Call out.");
 }
 $id("bcPeriod").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b)return;bcP=b.dataset.p;document.querySelectorAll("#bcPeriod .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));renderBest()});
 $id("bcPlat").addEventListener("click",e=>{const b=e.target.closest("[data-pl]");if(!b)return;bcPl=b.dataset.pl;document.querySelectorAll("#bcPlat .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));renderBest()});
@@ -381,8 +382,8 @@ let fillRing=()=>{};
   fillRing=function(){
     const pool=+D.top20Pool||0;
     slabs.forEach((s,i)=>{const x=D.top20[i];
-      s.front.innerHTML=(x?`<div class="cRow"><span class="cPlat">$${esc(x.tick)}</span><span class="cLike">#${i+1}</span></div><div class="cUser">${uL(x.u,x.w)}</div><div class="cRow"><span class="cSol">▲ ${Math.round(x.gain).toLocaleString()}%</span><span class="cLike">♥ ${x.likes|0}</span></div><div class="cRow"><span class="cBonus">★ +${(pool*(20-i)/210).toFixed(3)}</span><span class="cLike">${x.entered|0} calls</span></div>`
-        :`<div class="cRow"><span class="cPlat">OPEN</span><span class="cLike">#${i+1}</span></div><div class="cUser">Your spot</div><div class="cRow"><span class="cSol">Post a callout</span></div><div class="cRow"><span class="cBonus">★ Top 20 bonus</span></div>`)+`<i class="sh"></i>`;
+      s.front.innerHTML=(x?`<div class="cRow"><span class="cPlat">$${esc(x.tick)}</span><span class="cLike">#${i+1}</span></div><div class="cUser">${uL(x.u,x.w)}</div><div class="cRow"><span class="cSol">▲ ${Math.round(x.gain).toLocaleString()}%</span><span class="cLike">${fHold(x)} held</span></div><div class="cRow"><span class="cBonus">★ +${(pool*(20-i)/210).toFixed(3)}</span><span class="cLike">${x.entered|0} calls</span></div>`
+        :`<div class="cRow"><span class="cPlat">OPEN</span><span class="cLike">#${i+1}</span></div><div class="cUser">Your spot</div><div class="cRow"><span class="cSol">Call out a coin</span></div><div class="cRow"><span class="cBonus">★ Top 20 bonus</span></div>`)+`<i class="sh"></i>`;
       s.fs=s.front.querySelector(".sh");s.lf=-1;});
     const filled=D.top20.length;
     $id("ringCap").innerHTML=filled?`Top 20 bonus pool <b>${pool.toFixed(2)} SOL</b> · ${matchMedia("(hover: none)").matches?"tap a tablet to read it, tap again for their profile":"hover a tablet to read it, click for their profile"}`:`<b>20 open spots</b> in the Top 20 · the best callers get a bonus from every payout`;
@@ -472,7 +473,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("#xpCopy");if(!b)
 
 // ===== share-your-payout image =====
 const SHARE_HANDLE="@exposurefun";
-function shareData(x){return encodeURIComponent(JSON.stringify({u:x.u||"",w:x.w||"",sol:+x.sol||0,coin:x.coin||"",pl:x.pl||"pump",likes:x.likes|0,at:x.at||Date.now()}))}
+function shareData(x){return encodeURIComponent(JSON.stringify({u:x.u||"",w:x.w||"",sol:+x.sol||0,coin:x.coin||"",pl:x.pl||"exposure",hold:+x.hold||0,pnl:+x.pnl||0,at:x.at||Date.now()}))}
 function shareBtn(x){return `<button class="shareBtn" type="button" data-share="${shareData(x)}" aria-label="Share this payout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>`}
 function drawMark(g,cx,cy,s){g.save();g.translate(cx,cy);const gr=g.createLinearGradient(-s,-s,s,s);gr.addColorStop(0,"#ffe7cf");gr.addColorStop(.5,"#d96a26");gr.addColorStop(1,"#6b2a0c");g.fillStyle=gr;
   for(let k=0;k<9;k++){g.save();g.rotate(k*40*Math.PI/180);const w=s*.26,h=s*.57,r=w/2;g.beginPath();g.roundRect(-w/2,-s,w,h,r);g.fill();g.restore()}g.restore()}
@@ -499,7 +500,7 @@ async function makeShareCard(x){
   g.fillStyle="#b09a8c";g.font='500 30px Geist,sans-serif';g.fillText(`for calling $${c.t}${p.sym!=="SOL"?" / "+p.sym:""} on Exposure`,72,446);
   // chips
   const chip=(t,x0)=>{g.font='500 22px "Geist Mono",monospace';const w=g.measureText(t).width+36;g.strokeStyle="rgba(255,164,92,.4)";g.lineWidth=1.5;g.beginPath();g.roundRect(x0,500,w,46,23);g.stroke();g.fillStyle="#f7ece3";g.fillText(t,x0+18,531);return x0+w+12};
-  let cx0=72;cx0=chip(x.pl==="gmgn"?"Verified call on GMGN":`${x.likes|0} holder likes · ${NAMES[x.pl]||"pump.fun"}`,cx0);chip(new Date(x.at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),cx0);
+  let cx0=72;cx0=chip(callLine(x),cx0);chip(new Date(x.at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),cx0);
   // footer
   g.fillStyle="rgba(255,164,92,.25)";g.fillRect(0,H-64,W,1);g.fillStyle="#b09a8c";g.font='500 22px "Geist Mono",monospace';g.fillText("Hold it. Call it. Get paid.",72,H-24);
   g.textAlign="right";g.fillStyle="#f7ece3";g.fillText(SHARE_HANDLE,W-72,H-24);
@@ -571,7 +572,7 @@ function renderMe(){
     ${st?`<div class="card meNext"><div class="rkProg"><div class="bar"><i style="width:${Math.round(st.pct*100)}%"></i></div><p>${esc(st.txt)}</p></div></div>`:""}
     <div class="two">
       <div><div class="sec-head"><div><h2>Your callouts</h2><p>Callouts in open rounds, with your estimated share.</p></div></div>
-        <div class="list">${m.callouts.length?m.callouts.slice(0,12).map(x=>{const c=coinBy(x.coin)||{t:x.coin,mint:x.coin};return `<a class="pay rowLink" href="#coin-${encodeURIComponent(c.mint||x.coin)}">${coinAv(c,"sq")}<div class="t"><b>$${esc(c.t)} · ${NAMES[x.pl]}</b><span>${x.pl==="gmgn"?"Verified call":(x.hl|0)+" holder likes"} · ${x.n} callout${x.n>1?"s":""}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>estimated</small></div></a>`}).join(""):empty("No callouts yet. Hold an Exposure coin and post about it on pump.fun or Fomo. It enters by itself.",`<a class="btn sm" href="#explore">Find a coin</a>`)}</div></div>
+        <div class="list">${m.callouts.length?m.callouts.slice(0,12).map(x=>{const c=coinBy(x.coin)||{t:x.coin,mint:x.coin};return `<a class="pay rowLink" href="#coin-${encodeURIComponent(c.mint||x.coin)}">${coinAv(c,"sq")}<div class="t"><b>$${esc(c.t)}</b><span>${callLine(x)}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>estimated</small></div></a>`}).join(""):empty("No callouts yet. Hold an Exposure coin, open its page and tap Call out.",`<a class="btn sm" href="#explore">Find a coin</a>`)}</div></div>
       <div><div class="sec-head"><div><h2>Your payouts</h2><p>Every payout sent to this wallet.</p></div></div>
         <div class="list">${m.payouts.length?m.payouts.map(payRow).join(""):empty("No payouts yet. You'll see each one here with its transaction, and a button to share it.")}</div></div>
     </div>
@@ -586,6 +587,27 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("submit",e=>{if(e.target.id!=="meLook")return;e.preventDefault();const v=$id("meAddr").value.trim(),m=$id("meLookMsg");
   if(!isAddr(v)){m.className="msg err";m.textContent="We couldn't read that Solana address. Paste the full address.";return}setMe(v)});
+// ===== callouts: signed on Exposure =====
+document.addEventListener("click",e=>{const j=e.target.closest("[data-jump]");if(!j)return;e.preventDefault();const el=$id(j.dataset.jump);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});const i=el.querySelector("input");i&&setTimeout(()=>i.focus({preventScroll:true}),400)}});
+document.addEventListener("submit",async e=>{const f=e.target.closest("#callForm");if(!f)return;e.preventDefault();
+  const m=$id("callMsg"),btn=$id("callGo"),mint=f.dataset.mint,t=f.dataset.t,note=($id("callNote").value||"").replace(/[\r\n]+/g," ").trim().slice(0,140);
+  if(!CONFIG.api){m.className="msg";m.textContent="Callouts open at launch.";return}
+  const prov=await waitForWallet();
+  if(!prov){if(openInWalletApp())return;m.className="msg err";m.textContent="No Solana wallet found in this browser. Install Phantom (phantom.app) and refresh.";return}
+  btn.disabled=true;
+  try{m.className="msg";m.textContent="Approve in your wallet. It's a free signature, nothing is sent.";
+    const c=await prov.connect();const me=String((c&&c.publicKey)||prov.publicKey);if(me!==ME)setMe(me);
+    const msg=["Exposure callout","Coin: "+mint].concat(note?["Note: "+note]:[]).concat(["Wallet: "+me,"Time: "+new Date().toISOString()]).join("\n");
+    const s=await prov.signMessage(new TextEncoder().encode(msg),"utf8");const sig=s&&s.signature?s.signature:s;
+    m.textContent="Posting your callout…";
+    const r=await fetch(CONFIG.api.replace(/\/$/,"")+"/callout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mint,wallet:me,message:msg,signature:b64(new Uint8Array(sig))})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw{msg:j.error};
+    m.className="msg okm";m.textContent=`You called $${t}. You're in this round with ${(+j.holdPct||0).toFixed(3)}% held. Keep holding to keep your share.`;
+    $id("callNote").value="";await loadState();
+  }catch(err){m.className="msg err";m.textContent=err&&err.code===4001?"You cancelled in your wallet. Nothing was posted.":(err&&err.msg)||walletErr(err)}
+  finally{btn.disabled=false}});
+
 // ===== linked X accounts =====
 // caller.x = {handle, name, avatar}. Linking is wallet-signed, then X sign-in (OAuth) runs on the backend.
 function xOf(w){const c=D.callers.find(k=>k.w===w);return (c&&c.x)||(D.xLinks&&D.xLinks[w])||null}
@@ -663,7 +685,7 @@ function renderUserPage(){
     ${st&&st.next?`<div class="card meNext"><div class="rkProg"><div class="bar"><i style="width:${Math.round(st.pct*100)}%"></i></div><p>Next rank: ${esc(st.txt)}</p></div></div>`:""}
     <div class="two">
       <div><div class="sec-head"><div><h2>Open callouts</h2><p>Callouts in rounds that haven't paid out yet.</p></div></div>
-        <div class="list">${callouts.length?callouts.slice(0,12).map(x=>{const c=coinBy(x.coin)||{t:x.coin,mint:x.coin};return `<a class="pay rowLink" href="#coin-${encodeURIComponent(c.mint||x.coin)}">${coinAv(c,"sq")}<div class="t"><b>$${esc(c.t)} · ${NAMES[x.pl]}</b><span>${x.pl==="gmgn"?"Verified call":(x.hl|0)+" holder likes"} · ${x.n} callout${x.n>1?"s":""}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>estimated</small></div></a>`}).join(""):empty("No open callouts right now.")}</div></div>
+        <div class="list">${callouts.length?callouts.slice(0,12).map(x=>{const c=coinBy(x.coin)||{t:x.coin,mint:x.coin};return `<a class="pay rowLink" href="#coin-${encodeURIComponent(c.mint||x.coin)}">${coinAv(c,"sq")}<div class="t"><b>$${esc(c.t)}</b><span>${callLine(x)}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>estimated</small></div></a>`}).join(""):empty("No open callouts right now.")}</div></div>
       <div><div class="sec-head"><div><h2>Payouts</h2><p>Every payout this caller has received.</p></div></div>
         <div class="list">${payouts.length?payouts.slice(0,20).map(payRow).join(""):empty("No payouts yet.")}</div></div>
     </div>
@@ -728,10 +750,12 @@ function renderCoinPage(){
   const pays=D.payouts.filter(x=>x.coin===c.mint||x.coin===c.t),fee=c.fee!=null?+c.fee:(p.sym==="SOL"?0.3:null);
   const pageUrl=location.href.split("#")[0]+"#coin-"+encodeURIComponent(c.mint);
   const xText=`$${c.t} is on Exposure. Holders who call it out get paid from its creator fees.\n\n`;
+  // keep what someone is typing (and the last message) when the page refreshes its data
+  const keep=(()=>{const n=$id("callNote"),m=$id("callMsg"),f=$id("callForm");return f&&f.dataset.mint===c.mint?{v:n?n.value:"",focus:document.activeElement===n,msg:m?m.textContent:"",cls:m?m.className:"msg"}:null})();
   el.innerHTML=`<div class="cpHead">
       <div class="cpWho">${coinAv(c,"xl sq")}<div><div class="eyebrow">${age(c.createdAt)} old · ${esc(p.kind==="stock"?"Stock pair":p.kind==="crypto"?"Crypto pair":"SOL pair")}</div><h1>${esc(c.n)}</h1>
         <div class="cpTick"><span class="mono">$${esc(c.t)}</span> <span class="pairTag">/ ${esc(p.sym)}</span>${c.creatorU?` · <span>by @${esc(c.creatorU)}</span>`:""}</div></div></div>
-      <div class="cpActs"><a class="btn sig" href="https://pump.fun/coin/${encodeURIComponent(c.mint)}" target="_blank" rel="noopener">Buy on pump.fun</a>
+      <div class="cpActs"><a class="btn sig" href="#callForm" data-jump="callForm">Call out</a><a class="btn" href="https://pump.fun/coin/${encodeURIComponent(c.mint)}" target="_blank" rel="noopener">Buy on pump.fun</a>
         <a class="btn ghost" href="https://dexscreener.com/solana/${encodeURIComponent(c.mint)}" target="_blank" rel="noopener">Chart ↗</a>
         <a class="btn ghost" href="https://x.com/intent/post?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(pageUrl)}" target="_blank" rel="noopener">Share on X</a></div>
     </div>
@@ -750,15 +774,21 @@ function renderCoinPage(){
     </div>
     <div class="two">
       <div><div class="sec-head"><div><h2>This round's callers</h2><p>Estimated split if the pool paid out now.</p></div></div>
-        <div class="tablewrap"><table style="min-width:520px"><thead><tr><th>#</th><th>Caller</th><th>Platform</th><th class="num">Holder likes</th><th>Score</th><th class="num">Est. payout</th></tr></thead><tbody>
-        ${rows.length?rows.map((r,i)=>`<tr><td>${i+1}</td><td><span class="cwho">${avatar(r.u)}${uL(r.u,r.w)}</span></td><td><span class="plat">${NAMES[r.pl]}</span></td><td class="num">${r.pl==="gmgn"?"—":r.hl}</td><td><span class="meter"><i style="width:${(r.sc/max*100).toFixed(0)}%"></i></span></td><td class="num">${r.pay.toFixed(3)} SOL${r.cap?'<span class="capped">capped</span>':''}</td></tr>`).join(""):emptyRow(6,`No callouts this round yet. Be the first to call $${esc(c.t)}.`)}
+        <div class="tablewrap"><table style="min-width:520px"><thead><tr><th>#</th><th>Caller</th><th class="num">Holding</th><th class="num">PnL</th><th>Score</th><th class="num">Est. payout</th></tr></thead><tbody>
+        ${rows.length?rows.map((r,i)=>`<tr><td>${i+1}</td><td><span class="cwho">${avatar(r.u)}${uL(r.u,r.w)}</span></td><td class="num">${fHold(r)}</td><td class="num">${fPnl(r)}</td><td><span class="meter"><i style="width:${(r.sc/max*100).toFixed(0)}%"></i></span></td><td class="num">${r.pay.toFixed(3)} SOL${r.cap?'<span class="capped">capped</span>':''}</td></tr>`).join(""):emptyRow(6,`No callouts this round yet. Be the first to call $${esc(c.t)}.`)}
         </tbody></table></div></div>
       <div class="card"><h2 style="margin-bottom:12px">Get paid from $${esc(c.t)}</h2>
-        <ol class="pfSteps"><li><b>Buy and hold $${esc(c.t)}.</b> Only holders' callouts count.</li><li><b>Post a callout</b> on pump.fun or Fomo. It enters by itself.</li><li><b>Get holder likes.</b> Likes from wallets holding $${esc(c.t)} raise your score.</li><li><b>Get paid</b> when the pool reaches 1 SOL, straight to the wallet that posted.</li></ol></div>
+        <ol class="pfSteps"><li><b>Buy and hold $${esc(c.t)}.</b> At least 100,000 tokens.</li><li><b>Call it out here.</b> Your wallet signs, nothing is paid.</li><li><b>Keep holding.</b> The more it pumps after your call, the bigger your share.</li><li><b>Get paid</b> when the pool reaches 1 SOL, straight to your wallet.</li></ol>
+        <form class="callForm" id="callForm" data-mint="${esc(c.mint)}" data-t="${esc(c.t)}" novalidate>
+          <label for="callNote">Why are you calling it? <span class="opt">(optional)</span><input id="callNote" maxlength="140" placeholder="One line, up to 140 characters" autocomplete="off"></label>
+          <button class="btn sig" type="submit" id="callGo">Call out $${esc(c.t)}</button>
+          <p class="msg" id="callMsg" role="status"></p>
+        </form></div>
     </div>
     <div><div class="sec-head"><div><h2>Payouts from $${esc(c.t)}</h2></div></div>
       <div class="list">${pays.length?pays.map(payRow).join(""):empty("No payouts from this coin yet. The first goes out when the pool reaches 1 SOL.")}</div></div>`;
   el.querySelectorAll(".tablewrap tbody").forEach(labelTable);
+  if(keep){const n=$id("callNote"),m=$id("callMsg");if(n){n.value=keep.v;if(keep.focus)n.focus({preventScroll:true})}if(m&&keep.msg){m.textContent=keep.msg;m.className=keep.cls}}
   drawCoinChart(c);
 }
 function openCoin(k){go("coin-"+encodeURIComponent(k))}
@@ -814,11 +844,17 @@ function buildDemo(){
   for(let i=0;i<14;i++){const c=pick(coins),at=now-Math.round(i*1.4*36e5+r()*36e5),kind=pick(["claim","claim","payout","reserve","top20"]);activity.push({kind,coin:c.mint,sol:+(kind==="claim"?.05+r()*.3:kind==="payout"?.7:kind==="reserve"?.2:.1).toFixed(3),at,tx:demoAddr(r)})}
   activity.sort((a,b)=>b.at-a.at);
   const history=[];let tot=0;for(let d=7;d>=0;d--){const add=+(reserve/9*(.6+r()*.8)).toFixed(3);tot+=add;history.push({at:now-d*864e5,added:add,total:+tot.toFixed(3)})}
-  const callouts=[];coins.forEach(c=>{score(round[c.mint].map(x=>({...x})),THRESH).forEach(x=>callouts.push({u:x.u,w:x.w,coin:c.mint,pl:x.pl,n:x.n,likes:x.likes,hl:x.hl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at}))});
+  const callouts=[];coins.forEach(c=>{score(round[c.mint].map(x=>({...x})),THRESH).forEach(x=>callouts.push({u:x.u,w:x.w,coin:c.mint,pl:x.pl,n:x.n,hold:x.hold,pnl:x.pnl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at}))});
   const top20=callers.map(p=>{const mine=callouts.filter(x=>x.w===p.w);return{p,likes:mine.reduce((a,x)=>a+x.likes,0)+Math.round(r()*200),entered:p.calls30,gain:Math.round(p.bestX30*100-100),tick:mine[0]?(coins.find(c=>c.mint===mine[0].coin)||{}).t:pick(coins).t}});
   const rk=k=>{const v=top20.map(x=>x[k]).sort((a,b)=>a-b);top20.forEach(x=>x["r_"+k]=v.indexOf(x[k])/(v.length-1))};["gain","likes","entered"].forEach(rk);
   top20.forEach(x=>x.s=.45*x.r_gain+.4*x.r_likes+.15*x.r_entered);
   const T20=top20.sort((a,b)=>b.s-a.s).slice(0,20).map(x=>({u:x.p.u,w:x.p.w,tick:x.tick||pick(coins).t,gain:x.gain,likes:x.likes,entered:x.entered}));
+  // callouts are made on Exposure: each entry gets a holding (% of supply) and PnL (%) instead of likes
+  const dScore=x=>Math.sqrt(Math.min(1,x.hold))*(1+Math.max(0,Math.min(400,x.pnl))/100);
+  Object.values(round).forEach(rd=>rd.forEach(x=>{x.pl="exposure";x.hold=+(.02+r()*r()*.9).toFixed(3);x.pnl=Math.round((r()-.25)*240);x.wt=dScore(x);delete x.likes;delete x.hl}));
+  callouts.length=0;coins.forEach(c=>score(round[c.mint].map(x=>({...x})),THRESH).forEach(x=>callouts.push({u:x.u,w:x.w,coin:c.mint,pl:"exposure",n:1,hold:x.hold,pnl:x.pnl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at})));
+  payouts.forEach(p=>{p.pl="exposure";p.hold=+(.02+r()*.6).toFixed(3);p.pnl=Math.round(r()*260);delete p.likes});
+  T20.forEach(x=>{x.hold=+(.05+r()*.8).toFixed(3)});
   return{coins,round,callouts,callers,payouts,top20:T20,top20Pool:top20p*.4,reserve:{balance:tot,history},totals:{claimed,callers:+callersPaid.toFixed(3),top20:top20p,reserve:tot},activity,solUsd:152,paidTotal:+callersPaid.toFixed(3),live:false};
 }
 function demoToast(html){const t=$id("demoToast");if(!t)return;const el=document.createElement("div");el.className="dToast";el.innerHTML=html;t.appendChild(el);while(t.children.length>3)t.firstElementChild.remove();setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),400)},4200)}
@@ -834,14 +870,14 @@ function demoTick(){
   D.totals.claimed=+(D.totals.claimed+.02).toFixed(3);
   // new callout or likes
   if(r()<.55){const c=D.coins[Math.floor(r()*D.coins.length)],rd=D.round[c.mint];
-    if(r()<.4&&rd.length<9){const p=D.callers[Math.floor(r()*D.callers.length)];if(!rd.some(x=>x.w===p.w)){const pl=r()<.6?"pump":"fomo",likes=3+Math.floor(r()*20);rd.push({u:p.u,w:p.w,pl,n:1,likes,hl:Math.round(likes*.6),wt:Math.round(likes*.6),at:now});c.calls++;
+    if(r()<.4&&rd.length<9){const p=D.callers[Math.floor(r()*D.callers.length)];if(!rd.some(x=>x.w===p.w)){const pl="exposure",hold=+(.02+r()*.5).toFixed(3);rd.push({u:p.u,w:p.w,pl,n:1,hold,pnl:0,wt:Math.sqrt(hold),at:now});c.calls++;
       D.activity.unshift({kind:"claim",coin:c.mint,sol:+(.02+r()*.06).toFixed(3),at:now,tx:demoAddr(demoRng(now%2147483646||7))});
-      demoToast(`📣 <b>@${esc(p.u)}</b> called <b>$${esc(c.t)}</b> on ${NAMES[pl]}`)}}
-    else if(rd.length){const x=rd[Math.floor(r()*rd.length)];if(x.pl!=="gmgn"){const add=1+Math.floor(r()*6);x.likes+=add;x.hl+=Math.round(add*.7);x.wt=+(x.hl*1.1).toFixed(1)}}}
+      demoToast(`📣 <b>@${esc(p.u)}</b> called <b>$${esc(c.t)}</b> holding ${hold}%`)}}
+    else if(rd.length){const x=rd[Math.floor(r()*rd.length)];x.pnl=Math.round((x.pnl||0)+(r()-.4)*25);x.wt=Math.sqrt(Math.min(1,x.hold||0))*(1+Math.max(0,Math.min(400,x.pnl))/100)}}
   // payouts when a pool reaches 1 SOL
   D.coins.forEach(c=>{if(c.pool<THRESH)return;const rows=score((D.round[c.mint]||[]).map(x=>({...x})),THRESH);c.pool=+(c.pool-THRESH).toFixed(4);
     let paid=0;rows.forEach(x=>{if(x.pay<.001)return;paid+=x.pay;const tx=demoAddr(demoRng(Math.floor(r()*2e9)+1));
-      D.payouts.unshift({u:x.u,w:x.w,coin:c.mint,sol:+x.pay.toFixed(3),pl:x.pl,likes:x.hl,at:now,tx});const cl=D.callers.find(k=>k.w===x.w);if(cl){cl.earned+=x.pay;cl.earned30+=x.pay}});
+      D.payouts.unshift({u:x.u,w:x.w,coin:c.mint,sol:+x.pay.toFixed(3),pl:x.pl,hold:x.hold,pnl:x.pnl,at:now,tx});const cl=D.callers.find(k=>k.w===x.w);if(cl){cl.earned+=x.pay;cl.earned30+=x.pay}});
     c.paid=+(c.paid+paid).toFixed(3);D.paidTotal=+((D.paidTotal||0)+paid).toFixed(3);D.totals.callers=+(D.totals.callers+paid).toFixed(3);D.totals.top20=+(D.totals.top20+.1).toFixed(3);D.top20Pool=+((D.top20Pool||0)+.1).toFixed(3);
     D.reserve.balance=+(D.reserve.balance+.2).toFixed(3);D.totals.reserve=D.reserve.balance;const h=D.reserve.history[D.reserve.history.length-1];h.added=+(h.added+.2).toFixed(3);h.total=D.reserve.balance;
     const tx=demoAddr(demoRng(Math.floor(r()*2e9)+1));D.activity.unshift({kind:"reserve",coin:c.mint,sol:.2,at:now,tx},{kind:"payout",coin:c.mint,sol:+paid.toFixed(3),at:now,tx});
@@ -849,15 +885,15 @@ function demoTick(){
     D.callouts=D.callouts.filter(x=>x.coin!==c.mint);
     demoToast(`💸 <b>$${esc(c.t)}</b> paid out <b>${paid.toFixed(2)} SOL</b> to ${rows.length} caller${rows.length===1?"":"s"}`)});
   // refresh estimated callouts
-  D.callouts=[];D.coins.forEach(c=>score((D.round[c.mint]||[]).map(x=>({...x})),THRESH).forEach(x=>D.callouts.push({u:x.u,w:x.w,coin:c.mint,pl:x.pl,n:x.n,likes:x.likes,hl:x.hl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at||now})));
+  D.callouts=[];D.coins.forEach(c=>score((D.round[c.mint]||[]).map(x=>({...x})),THRESH).forEach(x=>D.callouts.push({u:x.u,w:x.w,coin:c.mint,pl:x.pl,n:x.n,hold:x.hold,pnl:x.pnl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at||now})));
   D.payouts=D.payouts.slice(0,80);D.activity=D.activity.slice(0,60);
   demoRender();
 }
 function startDemo(){if(CONFIG.api)return;DEMO_ON=true;D={...D,...buildDemo()};
   // make a few demo callers creators/holders so My Exposure has content
   const best=callerRanks("30").find(c=>c.tier)||D.callers[0];DEMO_ME=best.w;D.coins[0].creator=DEMO_ME;D.coins[0].creatorU=best.u;
-  [D.coins[0],D.coins[2]].forEach(c=>{if(!D.round[c.mint].some(x=>x.w===DEMO_ME)){D.round[c.mint].push({u:best.u,w:DEMO_ME,pl:"pump",n:2,likes:64,hl:41,wt:45,at:Date.now()-2e6});c.calls+=2}});
-  D.callouts=[];D.coins.forEach(c=>score(D.round[c.mint].map(x=>({...x})),THRESH).forEach(x=>D.callouts.push({u:x.u,w:x.w,coin:c.mint,pl:x.pl,n:x.n,likes:x.likes,hl:x.hl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at})));
+  [D.coins[0],D.coins[2]].forEach(c=>{if(!D.round[c.mint].some(x=>x.w===DEMO_ME)){D.round[c.mint].push({u:best.u,w:DEMO_ME,pl:"exposure",n:1,hold:.42,pnl:85,wt:Math.sqrt(.42)*1.85,at:Date.now()-2e6});c.calls+=1}});
+  D.callouts=[];D.coins.forEach(c=>score(D.round[c.mint].map(x=>({...x})),THRESH).forEach(x=>D.callouts.push({u:x.u,w:x.w,coin:c.mint,pl:x.pl,n:x.n,hold:x.hold,pnl:x.pnl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at})));
   renderAll();syncDemoUI();clearInterval(demoTimer);demoTimer=setInterval(demoTick,2600)}
 function stopDemo(){DEMO_ON=false;clearInterval(demoTimer);demoTimer=null;
   D={coins:[],round:{},callouts:[],callers:[],payouts:[],top20:[],top20Pool:0,reserve:{balance:0,history:[]},solUsd:0,live:false};
@@ -1035,7 +1071,7 @@ document.getElementById("f").addEventListener("submit",e=>{
   const show=mine=>{
     if(!mine.length){m.className="msg";m.textContent="No callouts from this wallet this round. Post one on pump.fun or Fomo about any Exposure coin you hold.";box.hidden=true;return}
     m.className="msg okm";m.textContent=`${mine.length} callout${mine.length>1?"s":""} entered this round.`;
-    box.innerHTML=mine.map(x=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay">${avatar(x.u||wal)}<div class="t"><b>$${esc(c.t)} · ${NAMES[x.pl]}</b><span>${x.pl==="gmgn"?"Verified call":(x.hl|0)+" holder likes"}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>est. this round</small></div></div>`}).join("");
+    box.innerHTML=mine.map(x=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay">${avatar(x.u||wal)}<div class="t"><b>$${esc(c.t)}</b><span>${callLine(x)}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>est. this round</small></div></div>`}).join("");
     box.hidden=false};
   if(!CONFIG.api){show(D.callouts.filter(x=>x.w===wal));return}
   m.className="msg";m.textContent="Checking…";
