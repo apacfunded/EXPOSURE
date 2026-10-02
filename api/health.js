@@ -23,6 +23,8 @@ export default guard(async (req, res) => {
   // launch lookup table (needed for dev buys with long names)
   let lut = null;
   if (chain.ok) lut = await run(async () => { const c = await import("../lib/chain.js"); const t = await c.findLaunchLut(); return { address: t ? t.address : null, authority: (await import("../lib/keys.js")).lutAuthority(process.env.POOL_MASTER_SEED).publicKey }; });
+  let external = null;
+  if (req.query && req.query.external === "1") external = await run(async () => { const x = await import("../lib/external.js"); return { list: await Promise.all(x.EXTERNAL_COINS.map(m => x.previewExternal(m).catch(e => ({ mint: m, error: e.message })))) }; });
   // ?coin=MINT: public view of that coin's pool wallet and the creator fees waiting in pump.fun's vaults
   let coin = null;
   if (req.query && req.query.coin && chain.ok) coin = await run(async () => {
@@ -50,5 +52,5 @@ export default guard(async (req, res) => {
     const out = await new Promise(resolve => { const res2 = { statusCode: 200, h: {}, setHeader(a, b) { this.h[a] = b; }, end(b) { resolve({ status: this.statusCode, body: b && JSON.parse(b) }); }, get headersSent() { return false; } }; import("./callout.js").then(m => m.default(r, res2)); });
     return { status: out.status, body: out.body, expected: "403 with a 'Hold at least' message means signing, rate limiting and the holder check all work" };
   });
-  send(res, 200, { node: process.version, opsWallet, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, chain, lut, simulation, coin, selftest });
+  send(res, 200, { node: process.version, opsWallet, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, chain, lut, external, simulation, coin, selftest });
 });
