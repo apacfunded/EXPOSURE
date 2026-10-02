@@ -26,7 +26,8 @@ export default guard(async (req, res) => {
     const pool = c.poolKeypair(String(req.query.coin)).publicKey;
     const v = await c.vaultBalances(pool);
     const curve = (await c.curveMarketCaps([String(req.query.coin)]))[String(req.query.coin)] || null;
-    return { curveMarketCapSol: curve && +curve.mcSol.toFixed(2), graduated: curve ? curve.complete : null, poolWallet: pool, poolBalanceSol: (await s.getBalance(pool)) / 1e9, unclaimedBondingCurveSol: v.bondingCurve / 1e9, unclaimedPumpSwapSol: v.amm / 1e9, opsBalanceSol: opsWallet ? (await s.getBalance(opsWallet)) / 1e9 : null };
+    const claimSim = req.query.simclaim === "1" ? await c.claimFees(String(req.query.coin), 1, { simulate: true }).catch(e => ({ error: e.message })) : undefined;
+    return { claimSim, curveMarketCapSol: curve && +curve.mcSol.toFixed(2), graduated: curve ? curve.complete : null, poolWallet: pool, poolBalanceSol: (await s.getBalance(pool)) / 1e9, unclaimedBondingCurveSol: v.bondingCurve / 1e9, unclaimedPumpSwapSol: v.amm / 1e9, opsBalanceSol: opsWallet ? (await s.getBalance(opsWallet)) / 1e9 : null };
   });
   send(res, 200, { node: process.version, opsWallet, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, chain, simulation, coin });
 });
