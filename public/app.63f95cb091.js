@@ -14,7 +14,7 @@ const CONFIG={
   reserveWallet:"4mxjihySJSjKD21xWpz6pCMYUQ6HZGyiFbJKbQC6JHGY",   // public $EXPO buyback reserve wallet
   top20Wallet:"H6cXX7wzgdVizvMT7yumtd7qcXR7YUBfyt11J51wvZzV"      // Top 20 bonus wallet
 };
-let DEMO_ON=false,demoTimer=null,DEMO_ME=null,XIDX={};
+let DEMO_ON=false,demoTimer=null,DEMO_ME=null,XIDX={},LAST_STATE_TXT="";
 // ===== security: clean everything the server sends before it touches the page =====
 // Numbers become real numbers, enums are checked against allowed values, image URLs must be https (or a safe data: image),
 // and anything else is forced to a plain string. Rendering code then escapes strings as before.
@@ -377,7 +377,7 @@ let fillRing=()=>{};
   for(let i=0;i<N;i++){
     const el=document.createElement("div");el.className="slab";
     el.innerHTML=`<div class="f front"></div><div class="f back"><span class="xp">Exposure</span><i class="sh"></i></div><div class="e et"></div><div class="e eb"></div><div class="e el"></div><div class="e er"></div>`;
-    ring.appendChild(el);el.dataset.i=i;slabs.push({el,front:el.querySelector(".front"),bs:el.querySelector(".back .sh"),a:i*360/N,h:0,lf:-1,lb:-1});
+    ring.appendChild(el);el.dataset.i=i;slabs.push({el,front:el.querySelector(".front"),bs:el.querySelector(".back .sh"),a:i*360/N,h:0,lh:-1,lf:-1,lb:-1});
   }
   fillRing=function(){
     const pool=+D.top20Pool||0;
@@ -390,7 +390,7 @@ let fillRing=()=>{};
   };
   fillRing();
   let R=280,S=160,lastW=0,hov=-1;
-  function size(){const w=stage.clientWidth,h=stage.clientHeight;lastW=w;if(!w)return;const out=Math.min(400,w*.42,h*.78);const cw=Math.max(100,out*.5);R=out-cw/2;S=cw;
+  function size(){const w=stage.clientWidth,h=stage.clientHeight;lastW=w;if(!w)return;slabs.forEach(s=>s.lh=-1);const out=Math.min(400,w*.42,h*.78);const cw=Math.max(100,out*.5);R=out-cw/2;S=cw;
     ring.style.setProperty("--w",cw+"px");ring.style.setProperty("--h",cw*.52+"px");ring.style.setProperty("--d",Math.max(3,cw*.026)+"px");}
   size();addEventListener("resize",size);
   const BASE=-24;let spin=0,tx=BASE,ty=0,cx=BASE,cy=0;
@@ -403,10 +403,11 @@ let fillRing=()=>{};
   stage.addEventListener("pointermove",e=>{const t=pick(e);if(t!==want){want=t;wantAt=performance.now()}},{passive:true});
   let ZOOM=.15;const setZoom=()=>{ZOOM=stage.clientWidth<600?1.05:.15};setZoom();addEventListener("resize",setZoom);
   stage.addEventListener("click",e=>{if(e.target.closest(".uLink"))return;const t=pick(e);if(t>=0&&t===hov&&D.top20[t]){go("u-"+encodeURIComponent(D.top20[t].w));return}hov=want=t;wantAt=0});
-  let last=performance.now();
+  let last=performance.now(),onScreen=true;
+  if("IntersectionObserver" in window)new IntersectionObserver(es=>{onScreen=es[0].isIntersecting},{threshold:0}).observe(stage);
   function frame(now){
     const dt=Math.min(50,now-last);last=now;
-    if(!explore.hidden){
+    if(!explore.hidden&&onScreen&&!document.hidden){
       if(stage.clientWidth!==lastW)size();
       if(want!==hov&&now-wantAt>(want<0?260:140))hov=want;
       if(!still&&hov<0)spin=(spin+dt*.006)%360;
@@ -414,10 +415,12 @@ let fillRing=()=>{};
       ring.style.transform=`rotateX(${cx}deg) rotateZ(${cy*.35}deg) rotateY(${spin}deg)`;
       const cz=cy*.35;
       slabs.forEach((s,i)=>{s.h+=((i===hov?1:0)-s.h)*(still?1:.14);const h=s.h<.002?0:s.h;
+        if(h===0&&s.lh===0)return; // resting tablets ride the ring's own rotation: nothing to recompute
+        s.lh=h;
         let turn=((s.a+spin)%360+540)%360-180;
         s.el.style.transform=`rotateY(${s.a}deg) translateZ(${R*(1-h)}px) rotateY(${-turn*h}deg) rotateZ(${-cz*h}deg) rotateX(${-cx*h}deg) translateZ(${h*(R*.85+S*.2)}px) translateY(${-h*S*.25}px) rotateY(${90*(1-h)}deg) rotateX(${8*(1-h)}deg) scale(${1+h*ZOOM})`;});
       for(const s of slabs){const sn=Math.sin((s.a+spin)*Math.PI/180);
-        const f=+Math.min(.45,.45*(1-Math.max(0,sn))*(1-s.h)).toFixed(2),bk=+Math.min(.45,.45*(1-Math.max(0,-sn))*(1-s.h)).toFixed(2);
+        const f=Math.round(Math.min(.45,.45*(1-Math.max(0,sn))*(1-s.h))*20)/20,bk=Math.round(Math.min(.45,.45*(1-Math.max(0,-sn))*(1-s.h))*20)/20;
         if(f!==s.lf&&s.fs){s.fs.style.opacity=f;s.lf=f}if(bk!==s.lb){s.bs.style.opacity=bk;s.lb=bk}}
     }
     requestAnimationFrame(frame);
@@ -811,12 +814,18 @@ function renderProof(){
     :empty("Nothing yet. Every fee claim, payout and burn will show here with its transaction.");
 }
 
-function renderAll(){rebuildX();renderXP();renderPays();renderRanks();renderTopCallers();renderCoins();renderBoard();renderReserve();renderStats();renderBest();fillRing();renderProof();if(window.CUR_VIEW==="coin")renderCoinPage();if(window.CUR_VIEW==="user")renderUserPage();renderMe()}
+// timing hook for the perf audit (no effect in normal use)
+window.__renderTimes=null;
+function renderAll(){if(window.__renderTimes){const T=window.__renderTimes;for(const f of [rebuildX,renderXP,renderPays,renderRanks,renderTopCallers,renderCoins,renderBoard,renderReserve,renderStats,renderBest,fillRing,renderProof,renderMe]){const t=performance.now();f();T[f.name]=+(performance.now()-t).toFixed(1)}if(window.CUR_VIEW==="coin")renderCoinPage();if(window.CUR_VIEW==="user")renderUserPage();return}
+  rebuildX();renderXP();renderPays();renderRanks();renderTopCallers();renderCoins();renderBoard();renderReserve();renderStats();renderBest();fillRing();renderProof();if(window.CUR_VIEW==="coin")renderCoinPage();if(window.CUR_VIEW==="user")renderUserPage();renderMe()}
 renderAll();
 async function loadState(){
   if(!CONFIG.api)return;
   try{const r=await fetch(CONFIG.api.replace(/\/$/,"")+"/state",{cache:"no-store"});if(!r.ok)throw 0;
-    const j=clean(await r.json());if(!j||typeof j!=="object")throw 0;D={...D,...j,live:true};renderAll()}catch(e){/* keep last good data; retry on the next tick */}
+    const txt=await r.text();if(txt===LAST_STATE_TXT)return;LAST_STATE_TXT=txt;
+    const j=clean(JSON.parse(txt));if(!j||typeof j!=="object")throw 0;const first=!D.live;D={...D,...j,live:true};
+    // first load draws everything; later refreshes redraw only the page on screen and mark the rest to redraw when opened
+    if(first||!window.CUR_VIEW){renderAll();STALE.clear()}else{VIEWS.forEach(v=>STALE.add(v));renderView(window.CUR_VIEW);if(ME)renderMe()}}catch(e){/* keep last good data; retry on the next tick */}
 }
 // ===== DEMO MODE =====
 // Fills the site with sample data and simulates trading, callouts and payouts so you can watch it run.
@@ -861,7 +870,8 @@ function demoToast(html){const t=$id("demoToast");if(!t)return;const el=document
 // redraw only the page on screen; hidden pages refresh when you open them
 const VIEW_RENDER={explore:()=>{renderPays();renderCoins();renderStats();renderBest();renderTopCallers();fillRing()},leaderboard:()=>{renderBoard();renderBest()},ranks:renderRanks,
   payouts:renderPays,reserve:renderReserve,proof:renderProof,expo:renderXP,coin:renderCoinPage,user:renderUserPage,me:()=>{if(ME)renderMe()}};
-function renderView(v){rebuildX();const f=VIEW_RENDER[v];if(f)f()}
+const STALE=new Set();
+function renderView(v){rebuildX();const f=VIEW_RENDER[v];if(f)f();STALE.delete(v)}
 function demoRender(){renderView(window.CUR_VIEW||"explore")}
 function demoTick(){
   const r=Math.random,now=Date.now();
@@ -927,9 +937,12 @@ if(CONFIG.demo&&!CONFIG.api)startDemo();else syncDemoUI();
 
 // opening intro: play the clip once, then reveal the site
 (function(){
-  const el=document.getElementById("intro"),v=document.getElementById("introVid"),vb=document.getElementById("introBg");if(!el||!v)return;
+  const el=document.getElementById("intro"),v=document.getElementById("introVid"),vb=null;if(!el||!v)return;
+  // play the intro on a first visit, then at most once every 12 hours; "Replay intro" in the footer always works
+  let seenAt=0;try{seenAt=+localStorage.getItem("exposure-intro-at")||0}catch(e){}
+  const skipIntro=Date.now()-seenAt<12*36e5;
   let done=false,guard;
-  function finish(){if(done)return;done=true;clearTimeout(guard);el.classList.add("out");setTimeout(()=>{el.hidden=true;try{v.pause();vb&&vb.pause()}catch(e){}},650)}
+  function finish(){if(done)return;done=true;clearTimeout(guard);try{localStorage.setItem("exposure-intro-at",String(Date.now()))}catch(e){}el.classList.add("out");setTimeout(()=>{el.hidden=true;try{v.pause();vb&&vb.pause()}catch(e){}},650)}
   function start(){done=false;el.hidden=false;el.classList.remove("out");
     if(vb&&getComputedStyle(vb).display!=="none"){try{vb.currentTime=0;const q=vb.play();q&&q.catch&&q.catch(()=>{})}catch(e){}}
     try{v.currentTime=0}catch(e){}
@@ -944,7 +957,7 @@ if(CONFIG.demo&&!CONFIG.api)startDemo();else syncDemoUI();
   document.getElementById("introSkip").addEventListener("click",finish);
   addEventListener("keydown",e=>{if(e.key==="Escape")finish()});
   window.replayIntro=start;
-  if(matchMedia("(prefers-reduced-motion: reduce)").matches){el.hidden=true;done=true;return}
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches||skipIntro){v.preload="none";v.removeAttribute("autoplay");el.hidden=true;done=true;return}
   start();
 })();
 
@@ -990,7 +1003,7 @@ function go(v,push=true){
   if(!VIEWS.includes(v))v="explore";
   if(v==="me")renderMe();
   const changed=curView!==null&&curView!==v;curView=v;window.CUR_VIEW=v;
-  if(DEMO_ON&&v!==curView&&typeof renderView==="function"&&v!=="coin"&&v!=="user")renderView(v);
+  if(v!==curView&&(DEMO_ON||STALE.has(v))&&v!=="coin"&&v!=="user")renderView(v);
   VIEWS.forEach(x=>document.getElementById("v-"+x).hidden=x!==v);
   if(v==="coin")drawCoinChart(coinBy(coinKey));
   if(changed){const vw=document.getElementById("v-"+v);vw.classList.remove("enter");void vw.offsetWidth;vw.classList.add("enter");
