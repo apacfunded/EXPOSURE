@@ -1037,15 +1037,15 @@ footer a{color:inherit}
       <div class="xpIntro">
         <div class="eyebrow">The Exposure token</div>
         <h1>$EXPO</h1>
-        <p>The token behind Exposure. Every payout on every coin feeds its buyback reserve, and once $EXPO is live, every payout buys it and burns it.</p>
+        <p>The token behind Exposure. 25% of every payout on every coin goes to the buyback reserve, which buys $EXPO and burns it.</p>
         <div class="xpStatus" id="xpStatus"></div>
       </div>
     </div>
 
     <div class="card xpCa">
-      <div class="xpCaRow"><div><div class="eyebrow">Contract address</div><div class="mono xpAddr" id="xpAddr">Posted here on launch day</div></div>
+      <div class="xpCaRow"><div><div class="eyebrow">Contract address</div><div class="mono xpAddr" id="xpAddr">66BhYPnx1JhqTz8N2HTzsodGDXCV5tDNcxbx2AHNpump</div></div>
         <div class="xpCaBtns" id="xpCaBtns"></div></div>
-      <p class="xpWarn">This page is the only place the real $EXPO address will appear. Ignore any address posted in DMs or replies before launch.</p>
+      <p class="xpWarn">This is the only real $EXPO address. Check it here before you buy, and ignore any other address posted in DMs or replies.</p>
     </div>
 
     <div class="statbar xpStats" role="group" aria-label="$EXPO totals">
@@ -1061,7 +1061,7 @@ footer a{color:inherit}
         <li><b>Coins trade</b><span>Every coin on Exposure earns creator fees on each trade.</span></li>
         <li><b>Pools pay out</b><span>Each time a coin's pool is worth 1 SOL, it splits 70 / 10 / 20.</span></li>
         <li><b>25% to the reserve</b><span>A quarter of every payout goes to the public reserve wallet.</span></li>
-        <li><b>Buy and burn</b><span>On launch day the whole reserve buys $EXPO and burns it. After that, every payout does.</span></li>
+        <li><b>Buy and burn</b><span>The reserve buys $EXPO and burns it on-chain. Every burn is listed below with its transaction.</span></li>
       </ol>
     </div>
 
@@ -1152,14 +1152,14 @@ footer a{color:inherit}
 
   <!-- RESERVE -->
   <section class="view" id="v-reserve" hidden>
-    <div class="sec-head"><div><div class="eyebrow">Buyback reserve</div><h1 style="font-size:clamp(26px,3.6vw,36px);margin-top:8px">Saving up for $EXPO</h1>
-    <p>25% of every payout goes into a public reserve wallet. When $EXPO launches, the whole reserve buys it and burns it on-chain. From then on, every payout burns.</p></div></div>
+    <div class="sec-head"><div><div class="eyebrow">Buyback reserve</div><h1 style="font-size:clamp(26px,3.6vw,36px);margin-top:8px">The $EXPO buyback</h1>
+    <p>25% of every payout goes into a public reserve wallet that buys $EXPO and burns it on-chain.</p></div></div>
     <div class="two">
       <div class="card">
         <div class="eyebrow">Reserve balance</div>
         <div class="big" id="resBal">—</div>
-        <p style="color:var(--muted);margin:4px 0 14px">Held in a public wallet anyone can check. The first burn happens the day $EXPO goes live.</p>
-        <div class="summary"><div>Reserve wallet <b id="resWallet">shown at launch</b></div><div>$EXPO contract <b>coming after the launchpad</b></div></div>
+        <p style="color:var(--muted);margin:4px 0 14px">Held in a public wallet anyone can check. It only ever buys $EXPO and burns it.</p>
+        <div class="summary"><div>Reserve wallet <b id="resWallet">shown at launch</b></div><div>$EXPO contract <b><a class="mono" href="https://solscan.io/token/66BhYPnx1JhqTz8N2HTzsodGDXCV5tDNcxbx2AHNpump" target="_blank" rel="noopener" style="color:inherit">66Bh…pump ↗</a></b></div></div>
       </div>
       <div class="tablewrap">
         <table style="min-width:380px">
@@ -1192,7 +1192,7 @@ footer a{color:inherit}
       <details><summary>How do caller stars work?</summary><p>Anyone holding an Exposure coin can rate a ranked caller from 1 to 5 stars. Each wallet gets one rating per caller and can change it later. You prove the wallet is yours by signing a free message, so nothing is sent. Stars show once a caller has at least 3 ratings. They're separate from a caller's rank, which comes only from how their calls actually did.</p></details>
       <details><summary>Can I pair my coin with a stock?</summary><p>Yes. pump.fun's Custom Pairs let a coin trade against tokenized stocks like Nvidia or Tesla, against BTC or ETH, or against SOL and USDC. Pick the pair when you launch. Creator fees are collected in that asset, so a coin paired with Nvidia fills its pool with tokenized Nvidia and pays its callers in it. Custom pairs also let you set the creator fee anywhere from 0.05% to 1%.</p></details>
       <details><summary>How does a stock-paired pool reach 1 SOL?</summary><p>The pool pays out when it's worth 1 SOL at the current price, whatever asset it holds. Callers and the Top 20 are paid in the paired asset. The 25% reserve share is swapped to SOL for the $EXPO buyback.</p></details>
-      <details><summary>When does $EXPO launch?</summary><p>After the launchpad. Until then, 25% of every payout builds the buyback reserve. On launch day the reserve buys $EXPO and burns it, and every payout after that burns too.</p></details>
+      <details><summary>What is $EXPO and where do I buy it?</summary><p>$EXPO is the Exposure token, live on pump.fun. The only real contract address is <span class="mono">66BhYPnx1JhqTz8N2HTzsodGDXCV5tDNcxbx2AHNpump</span>, also shown on the $EXPO page. 25% of every payout goes to the reserve, which buys $EXPO and burns it.</p></details>
     </div>
   </section>
 <dialog class="rateDlg" id="rateDlg" aria-labelledby="rateTitle">
@@ -1239,8 +1239,8 @@ footer a{color:inherit}
 </main>
 <div class="demoToast" id="demoToast" aria-live="polite"></div>
 
-<footer><span>Exposure · creator fees, paid back to the people who spread the word.</span><span class="mono">$EXPO · coming after the launchpad · <a href="#proof">Transparency</a> · <a href="#terms">Terms</a> · <span><a href="#" id="demoToggle">Show demo</a> · </span><a href="#" id="replayIntro" style="color:inherit">Replay intro</a></span></footer>
+<footer><span>Exposure · creator fees, paid back to the people who spread the word.</span><span class="mono"><a href="#expo">$EXPO</a> · <a href="#proof">Transparency</a> · <a href="#terms">Terms</a> · <span><a href="#" id="demoToggle">Show demo</a> · </span><a href="#" id="replayIntro" style="color:inherit">Replay intro</a></span></footer>
 </div>
 </div>
 
-<script src="/app.17d48069f0.js" defer></script>
+<script src="/app.8b3c4b490c.js" defer></script>
