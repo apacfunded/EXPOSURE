@@ -55,7 +55,7 @@ test("payout: nothing under 1 SOL; split adds up; never more than the pool; cap 
   const entries = [{ w: "a", pl: "pump", n: 1, wt: 100 }, { w: "b", pl: "fomo", n: 3, wt: 20 }, { w: "c", pl: "gmgn", n: 1, wt: 1 }];
   const p = planPayout(2 * LAMPORTS, entries);
   const sent = p.sends.reduce((a, s) => a + s.lamports, 0);
-  assert.equal(p.top20, 0.2 * LAMPORTS); assert.equal(p.reserve, 0.4 * LAMPORTS);
+  assert.equal(p.top20, 0.1 * LAMPORTS); assert.equal(p.reserve, 0.5 * LAMPORTS);
   assert.ok(sent <= 1.4 * LAMPORTS);
   assert.equal(sent + p.top20 + p.reserve + p.leftover, 2 * LAMPORTS);
   assert.ok(p.leftover >= 0);
@@ -87,4 +87,22 @@ test("callout score: holdings × PnL, whale cap, sellers get nothing", async () 
   assert.ok(Math.abs(bought.holdPct - 0.1) < 1e-9);
   assert.equal(calloutScore({ tokensAtCall: 1e6, tokensNow: 1e6, mcAtCall: 100, mcNow: 50 }).pnl, 0); // losses floor at 0
   assert.equal(calloutScore({ tokensAtCall: 1e6, tokensNow: 1e6, mcAtCall: 1, mcNow: 100 }).pnl, 4); // capped at +400%
+});
+
+test("split is 70 / 5 / 25 and always adds up", async () => {
+  const { planPayout, LAMPORTS } = await import("../lib/payout.js");
+  const p = planPayout(2 * LAMPORTS, [{ w: "a", pl: "exposure", n: 1, wt: 1 }, { w: "b", pl: "exposure", n: 1, wt: 3 }]);
+  assert.equal(p.top20, 0.1 * LAMPORTS); assert.equal(p.reserve, 0.5 * LAMPORTS);
+  const sent = p.sends.reduce((a, s) => a + s.lamports, 0);
+  assert.equal(sent + p.top20 + p.reserve + p.leftover, 2 * LAMPORTS);
+});
+
+test("daily Top 20: rank shares 20..1, one per wallet, never more than the pool", async () => {
+  const { planTop20, LAMPORTS } = await import("../lib/payout.js");
+  const ranked = Array.from({ length: 25 }, (_, i) => ({ w: "w" + i, gain: 100 - i })); ranked.splice(3, 0, { w: "w0", gain: 50 });
+  const p = planTop20(2.1 * LAMPORTS, ranked);
+  assert.equal(p.sends.length, 20); assert.equal(p.sends[0].w, "w0"); assert.equal(p.sends[0].lamports, 0.2 * LAMPORTS); assert.equal(p.sends[19].lamports, 0.01 * LAMPORTS);
+  assert.equal(new Set(p.sends.map(s => s.w)).size, 20);
+  assert.ok(p.sends.reduce((a, s) => a + s.lamports, 0) + p.leftover === 2.1 * LAMPORTS);
+  assert.equal(planTop20(0, ranked).sends.length, 0); assert.equal(planTop20(1e9, []).sends.length, 0);
 });

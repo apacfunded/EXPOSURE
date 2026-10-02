@@ -905,7 +905,7 @@ footer a{color:inherit}
         <h3 style="margin-top:14px;font-size:18px" id="pvName">Coin name</h3>
         <div class="mono" style="color:var(--muted);font-size:14px"><span id="pvTick">$TICKER</span> <span class="pairTag" id="pvPair">/ SOL</span></div>
         <p style="color:var(--muted);font-size:14px;margin:8px 0 14px" id="pvDesc">Your description shows here.</p>
-        <div class="split"><span style="flex:70 1 0;background:var(--signal)">70% callers</span><span style="flex:10 1 0;background:var(--ok)" title="Top 20 bonus">10%</span><span style="flex:20 1 0;background:var(--burn)">20% reserve</span></div>
+        <div class="split"><span style="flex:70 1 0;background:var(--signal)">70% callers</span><span style="flex:5 1 0;background:var(--ok)" title="Top 20 bonus, paid daily">5%</span><span style="flex:25 1 0;background:var(--burn)">25% reserve</span></div>
         <div class="summary" style="margin-top:12px">
           <div>Creator fee <b id="pvFee">0.30%</b>, paid in <b id="pvFeeAsset">SOL</b></div>
           <div>Creator fees go to <b>this coin's callout pool</b></div>
@@ -971,7 +971,7 @@ footer a{color:inherit}
           <li><b>Holding.</b> Counts the lower of what you held when you called and what you hold now. Buying more later doesn't add; selling lowers it, and selling out drops you to zero.</li>
           <li><b>PnL.</b> How much the coin's market cap rose since your call. Losses count as 0%, gains count up to +400%.</li>
           <li><b>Score = √holding × (1 + PnL).</b> Holding is capped at 1% of supply, so one whale can't take the whole pool.</li>
-          <li><b>Top 20 bonus.</b> 10% of every payout on every coin goes to the top 20 callers in the ring, ranked by the biggest % gain on their calls. #1 gets the biggest share, down to #20.</li>
+          <li><b>Top 20 bonus.</b> 5% of every payout on every coin builds the Top 20 pool. Once a day it pays the 20 callers with the biggest % gain on their calls in the last 7 days. #1 gets 20 shares, down to #20 with 1.</li>
           <li><b>0.5 SOL max</b> per wallet per payout. Anything over stays in the pool for the next round.</li>
         </ul>
         
@@ -1060,7 +1060,7 @@ footer a{color:inherit}
       <ol class="xpFlow">
         <li><b>Coins trade</b><span>Every coin on Exposure earns creator fees on each trade.</span></li>
         <li><b>Pools pay out</b><span>Each time a coin's pool is worth 1 SOL, it splits 70 / 10 / 20.</span></li>
-        <li><b>20% to the reserve</b><span>One fifth of every payout goes to the public reserve wallet.</span></li>
+        <li><b>25% to the reserve</b><span>A quarter of every payout goes to the public reserve wallet.</span></li>
         <li><b>Buy and burn</b><span>On launch day the whole reserve buys $EXPO and burns it. After that, every payout does.</span></li>
       </ol>
     </div>
@@ -1081,7 +1081,7 @@ footer a{color:inherit}
           <div><dt>Chain</dt><dd>Solana</dd></div>
           <div><dt>Launches on</dt><dd>pump.fun</dd></div>
           <div><dt>Launch</dt><dd id="xpWhen">After the launchpad</dd></div>
-          <div><dt>Buy pressure</dt><dd>20% of every Exposure payout</dd></div>
+          <div><dt>Buy pressure</dt><dd>25% of every Exposure payout</dd></div>
           <div><dt>Bought $EXPO</dt><dd>Burned, never sold</dd></div>
           <div><dt>Reserve wallet</dt><dd id="xpResW">Shown at launch</dd></div>
         </dl>
@@ -1125,10 +1125,10 @@ footer a{color:inherit}
         <ol class="pfSteps">
           <li>Open any wallet above on Solscan. Every transaction is public.</li>
           <li>Each payout is one transaction. It lists every wallet paid and how much.</li>
-          <li>Every payout splits the same way: 70% to callers, 10% to the Top 20, 20% to the reserve.</li>
+          <li>Every payout splits the same way: 70% to callers, 5% to the Top 20 (paid out daily), 25% to the reserve.</li>
           <li>The scoring rules are on the <a href="#how">How it works</a> page. They're the same for every coin.</li>
         </ol>
-        <div class="split" style="margin-top:16px"><span style="flex:70 1 0;background:var(--signal)">70% callers</span><span style="flex:10 1 0;background:var(--ok)" title="Top 20 bonus">10%</span><span style="flex:20 1 0;background:var(--burn)">20% reserve</span></div>
+        <div class="split" style="margin-top:16px"><span style="flex:70 1 0;background:var(--signal)">70% callers</span><span style="flex:5 1 0;background:var(--ok)" title="Top 20 bonus, paid daily">5%</span><span style="flex:25 1 0;background:var(--burn)">25% reserve</span></div>
       </div>
     </div>
   </section>
@@ -1153,7 +1153,7 @@ footer a{color:inherit}
   <!-- RESERVE -->
   <section class="view" id="v-reserve" hidden>
     <div class="sec-head"><div><div class="eyebrow">Buyback reserve</div><h1 style="font-size:clamp(26px,3.6vw,36px);margin-top:8px">Saving up for $EXPO</h1>
-    <p>20% of every payout goes into a public reserve wallet. When $EXPO launches, the whole reserve buys it and burns it on-chain. From then on, every payout burns.</p></div></div>
+    <p>25% of every payout goes into a public reserve wallet. When $EXPO launches, the whole reserve buys it and burns it on-chain. From then on, every payout burns.</p></div></div>
     <div class="two">
       <div class="card">
         <div class="eyebrow">Reserve balance</div>
@@ -1177,10 +1177,10 @@ footer a{color:inherit}
       <div class="card"><div class="eyebrow" style="color:var(--signal)">1 · Launch</div><h3 style="font-size:16px;margin:8px 0 6px">Coin goes live</h3><p style="color:var(--muted);margin:0;font-size:14px">Anyone launches on pump.fun through Exposure. That coin's creator fees fill its own pool.</p></div>
       <div class="card"><div class="eyebrow" style="color:var(--signal)">2 · Call it</div><h3 style="font-size:16px;margin:8px 0 6px">Post a callout</h3><p style="color:var(--muted);margin:0;font-size:14px">Holders open the coin on Exposure and tap Call out. Their wallet signs it, nothing is paid.</p></div>
       <div class="card"><div class="eyebrow" style="color:var(--signal)">3 · Hold and pump</div><h3 style="font-size:16px;margin:8px 0 6px">Calls are scored</h3><p style="color:var(--muted);margin:0;font-size:14px">Your score is your holding (capped at 1% of supply) times how much the coin gained since your call.</p></div>
-      <div class="card"><div class="eyebrow" style="color:var(--signal)">4 · Get paid</div><h3 style="font-size:16px;margin:8px 0 6px">Pool splits</h3><p style="color:var(--muted);margin:0;font-size:14px">Every time a coin's pool reaches 1 SOL, 70% pays that round's callers by score, 10% goes to the Top 20 bonus and 20% goes to the $EXPO buyback reserve.</p></div>
+      <div class="card"><div class="eyebrow" style="color:var(--signal)">4 · Get paid</div><h3 style="font-size:16px;margin:8px 0 6px">Pool splits</h3><p style="color:var(--muted);margin:0;font-size:14px">Every time a coin's pool reaches 1 SOL, 70% pays that round's callers by score, 5% goes to the Top 20 bonus (paid daily) and 25% goes to the $EXPO buyback reserve.</p></div>
     </div>
     <div class="faq">
-      <details><summary>What is the Top 20 bonus?</summary><p>10% of every payout across all coins builds a bonus pool for the top 20 callers on Exposure. They're ranked by the biggest % gain from their calls in the last 7 days. It pays out on top of their normal earnings, weighted by rank: #1 gets 20 shares, #2 gets 19, down to #20 with 1 share.</p></details>
+      <details><summary>What is the Top 20 bonus?</summary><p>5% of every payout across all coins builds a bonus pool for the top 20 callers on Exposure, and it pays out once a day. They're ranked by the biggest % gain from their calls in the last 7 days. It pays out on top of their normal earnings, weighted by rank: #1 gets 20 shares, #2 gets 19, down to #20 with 1 share.</p></details>
       <details><summary>When do payouts happen?</summary><p>Every time a coin's pool reaches 1 SOL from creator fees. Busy coins pay out many times a day; quiet coins pay out when they get there. Each payout covers the callouts posted since the last one.</p></details>
       <details><summary>How is my share worked out?</summary><p>Score = √holding × (1 + PnL). Holding is the lower of what you held when you called and what you hold now, as a % of supply, capped at 1%. PnL is how much the coin's market cap rose since your call: losses count as 0% and gains count up to +400%. Your share of the 70% is your score divided by everyone's score in that round, capped at 0.5 SOL per payout.</p></details>
       <details><summary>Can I call out more than once?</summary><p>One callout per coin per round. It stays in until that coin's next payout, then you can call it again. You can call out as many different coins as you like.</p></details>
@@ -1191,8 +1191,8 @@ footer a{color:inherit}
       <details><summary>Can I call out on pump.fun or X too?</summary><p>Post wherever you like, and use the share link to send people to the coin. Only callouts made on Exposure count toward payouts, because they're signed by your wallet.</p></details>
       <details><summary>How do caller stars work?</summary><p>Anyone holding an Exposure coin can rate a ranked caller from 1 to 5 stars. Each wallet gets one rating per caller and can change it later. You prove the wallet is yours by signing a free message, so nothing is sent. Stars show once a caller has at least 3 ratings. They're separate from a caller's rank, which comes only from how their calls actually did.</p></details>
       <details><summary>Can I pair my coin with a stock?</summary><p>Yes. pump.fun's Custom Pairs let a coin trade against tokenized stocks like Nvidia or Tesla, against BTC or ETH, or against SOL and USDC. Pick the pair when you launch. Creator fees are collected in that asset, so a coin paired with Nvidia fills its pool with tokenized Nvidia and pays its callers in it. Custom pairs also let you set the creator fee anywhere from 0.05% to 1%.</p></details>
-      <details><summary>How does a stock-paired pool reach 1 SOL?</summary><p>The pool pays out when it's worth 1 SOL at the current price, whatever asset it holds. Callers and the Top 20 are paid in the paired asset. The 20% reserve share is swapped to SOL for the $EXPO buyback.</p></details>
-      <details><summary>When does $EXPO launch?</summary><p>After the launchpad. Until then, 20% of every payout builds the buyback reserve. On launch day the reserve buys $EXPO and burns it, and every payout after that burns too.</p></details>
+      <details><summary>How does a stock-paired pool reach 1 SOL?</summary><p>The pool pays out when it's worth 1 SOL at the current price, whatever asset it holds. Callers and the Top 20 are paid in the paired asset. The 25% reserve share is swapped to SOL for the $EXPO buyback.</p></details>
+      <details><summary>When does $EXPO launch?</summary><p>After the launchpad. Until then, 25% of every payout builds the buyback reserve. On launch day the reserve buys $EXPO and burns it, and every payout after that burns too.</p></details>
     </div>
   </section>
 <dialog class="rateDlg" id="rateDlg" aria-labelledby="rateTitle">
@@ -1243,4 +1243,4 @@ footer a{color:inherit}
 </div>
 </div>
 
-<script src="/app.63f95cb091.js" defer></script>
+<script src="/app.17d48069f0.js" defer></script>

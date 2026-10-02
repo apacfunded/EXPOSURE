@@ -6,9 +6,9 @@ import { db, eq } from "../../lib/db.js";
 import { send, guard, cronAuthorized, paused } from "../../lib/http.js";
 import { currentMcUsd } from "../../lib/mc.js";
 import { tokenBalance } from "../../lib/rpc.js";
-import { planPayout, isWin, LAMPORTS, calloutScore } from "../../lib/payout.js";
+import { planPayout, planTop20, isWin, LAMPORTS, calloutScore } from "../../lib/payout.js";
 import { rpc } from "../../lib/rpc.js";
-import { claimFees, balance, sendFromPool, vaultBalances } from "../../lib/chain.js";
+import { claimFees, balance, sendFromPool, vaultBalances, sendFromTop20, top20Keypair } from "../../lib/chain.js";
 
 const RENT_KEEP = 2_000_000; // leave a little in each pool wallet for rent + network fees
 
@@ -71,8 +71,9 @@ async function claim() {
 async function payout() {
   const live = process.env.PAYOUTS_ENABLED === "1";
   const runCap = Math.round(Number(process.env.MAX_PAYOUT_SOL_PER_RUN || "5") * LAMPORTS);
-  const { TOP20_WALLET, RESERVE_WALLET } = process.env;
-  if (!TOP20_WALLET || !RESERVE_WALLET) return { error: "TOP20_WALLET and RESERVE_WALLET must be set" };
+  const { RESERVE_WALLET } = process.env;
+  if (!RESERVE_WALLET) return { error: "RESERVE_WALLET must be set" };
+  const TOP20_POOL = top20Keypair().publicKey; // the daily Top 20 job pays this out
   const coins = await db.select("coins", "confirmed=eq.true&limit=1000");
   const out = []; let sentThisRun = 0;
   for (const c of coins) {
@@ -96,7 +97,7 @@ async function payout() {
     catch (e) { out.push({ mint: c.mint, skipped: "round_exists" }); continue; }
     await db.update("coins", `mint=${eq(c.mint)}`, { round_no: roundNo });
     const lines = [...plan.sends.map(s => ({ to: s.w, lamports: s.lamports, kind: "payout", pl: s.pl, hold: (merged.get(s.w + s.pl) || {}).hold || 0, pnl: (merged.get(s.w + s.pl) || {}).pnl || 0 })),
-      { to: TOP20_WALLET, lamports: plan.top20, kind: "top20" }, { to: RESERVE_WALLET, lamports: plan.reserve, kind: "reserve" }];
+      { to: TOP20_POOL, lamports: plan.top20, kind: "top20" }, { to: RESERVE_WALLET, lamports: plan.reserve, kind: "reserve" }];
     await db.insert("payouts", lines.map(l => ({ round_id: round.id, mint: c.mint, wallet: l.to, platform: l.pl || null, hold_pct: l.hold || null, pnl: l.pnl ?? null, lamports: l.lamports, kind: l.kind })));
     try {
       const sigs = await sendFromPool(c.mint, lines);
@@ -120,7 +121,36 @@ async function payout() {
   return { live, results: out };
 }
 
-const JOBS = { tick, claim, payout };
+// Once a day: pay the Top 20 pool to the 20 best callers of the last 7 days (biggest gain within 24h of the call).
+// #1 gets 20 shares, #20 gets 1. The unique day row means a day can never be paid twice.
+async function top20() {
+  const live = process.env.PAYOUTS_ENABLED === "1";
+  const w = top20Keypair().publicKey;
+  const pool = Math.max(0, (await balance(w)) - RENT_KEEP);
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  const calls = await db.select("callouts", `posted_at=gte.${since}&mc_at_call=gt.0&peak_mc_24h=gt.0&select=wallet,mc_at_call,peak_mc_24h&limit=5000`);
+  const best = new Map();
+  for (const c of calls) { const g = +c.peak_mc_24h / +c.mc_at_call; if (!best.has(c.wallet) || g > best.get(c.wallet)) best.set(c.wallet, g); }
+  const ranked = [...best.entries()].filter(([, g]) => g > 1).sort((a, b) => b[1] - a[1]).map(([w, gain]) => ({ w, gain }));
+  const plan = planTop20(pool, ranked);
+  if (!plan.sends.length) return { live, pool, skipped: ranked.length ? "pool_too_small" : "no_ranked_callers" };
+  if (!live) return { live, dryRun: true, pool, plan };
+  const day = new Date().toISOString().slice(0, 10);
+  try { await db.insert("top20_days", [{ day, pool_lamports: pool, plan, status: "sending" }]); }
+  catch (e) { return { skipped: "already_paid_today", day }; }
+  try {
+    const sigs = await sendFromTop20(plan.sends.map(s => ({ to: s.w, lamports: s.lamports, rank: s.rank })));
+    for (const { sig, batch } of sigs) for (const l of batch)
+      await db.insert("activity", [{ kind: "top20", wallet: l.to, lamports: l.lamports, tx: sig }]);
+    await db.update("top20_days", `day=eq.${day}`, { status: "done", finished_at: new Date().toISOString() });
+    return { live, day, paid: plan.sends.length, txs: sigs.map(s => s.sig) };
+  } catch (e) {
+    await db.update("top20_days", `day=eq.${day}`, { status: "failed" });
+    return { day, error: e.message, sig: e.sig };
+  }
+}
+
+const JOBS = { tick, claim, payout, top20 };
 export default guard(async (req, res) => {
   if (!cronAuthorized(req)) return send(res, 401, { error: "unauthorized" });
   const job = JOBS[String(req.query.job || "")];

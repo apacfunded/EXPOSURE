@@ -7,10 +7,11 @@ on:
     - cron: "*/5 * * * *"    # tick: market caps, wins, callouts, confirm launches
     - cron: "7,37 * * * *"   # claim creator fees
     - cron: "*/15 * * * *"   # payouts (dry run unless PAYOUTS_ENABLED=1 in Vercel)
+    - cron: "3 0 * * *"      # daily Top 20 bonus (5:03 PM Arizona)
   workflow_dispatch:
     inputs:
       job:
-        description: "tick, claim or payout"
+        description: "tick, claim, payout or top20"
         required: true
         default: "tick"
 permissions: {}
@@ -30,8 +31,8 @@ jobs:
           INPUT: ${{ inputs.job }}
         run: |
           case "$SCHED" in
-            "*/5 * * * *") JOB=tick;; "7,37 * * * *") JOB=claim;; "*/15 * * * *") JOB=payout;; *) JOB="$INPUT";;
+            "*/5 * * * *") JOB=tick;; "7,37 * * * *") JOB=claim;; "*/15 * * * *") JOB=payout;; "3 0 * * *") JOB=top20;; *) JOB="$INPUT";;
           esac
-          case "$JOB" in tick|claim|payout) ;; *) echo "bad job"; exit 1;; esac
+          case "$JOB" in tick|claim|payout|top20) ;; *) echo "bad job"; exit 1;; esac
           if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then echo "secrets not set yet"; exit 0; fi
           curl -sS --fail-with-body -m 90 -H "Authorization: Bearer $CRON_SECRET" "$SITE_URL/api/cron/$JOB"

@@ -8,11 +8,11 @@ const CONFIG={
   demo:false,         // sample data + live simulation (preview only). Keep false for the live site
   refreshMs:20000,
   botWallet:"",       // claims fees + sends payouts
-  top20Wallet:"H6cXX7wzgdVizvMT7yumtd7qcXR7YUBfyt11J51wvZzV",     // Top 20 bonus wallet
+  top20Wallet:"5GDWSMHMPQASsbMUZRwjPy2qncV5F9jBnmeXMEC6awiH",     // Top 20 bonus wallet
   extraLaunchPrograms:[], // add a program id here only if pump.fun launches need it (e.g. custom pairs)
   xpMint:"",          // $EXPO contract address, set on launch day
   reserveWallet:"4mxjihySJSjKD21xWpz6pCMYUQ6HZGyiFbJKbQC6JHGY",   // public $EXPO buyback reserve wallet
-  top20Wallet:"H6cXX7wzgdVizvMT7yumtd7qcXR7YUBfyt11J51wvZzV"      // Top 20 bonus wallet
+  top20Wallet:"5GDWSMHMPQASsbMUZRwjPy2qncV5F9jBnmeXMEC6awiH"      // Top 20 bonus wallet
 };
 let DEMO_ON=false,demoTimer=null,DEMO_ME=null,XIDX={},LAST_STATE_TXT="";
 // ===== security: clean everything the server sends before it touches the page =====
@@ -330,7 +330,7 @@ $id("coinGrid").addEventListener("click",e=>{const board=e.target.closest("[data
 function renderReserve(){
   const h=D.reserve.history||[];
   $id("resRows").innerHTML=h.length?h.slice().reverse().map(r=>`<tr><td>${new Date(r.at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td><td class="num">+${(+r.added).toFixed(2)} SOL</td><td class="num" style="color:var(--burn);font-weight:600">${(+r.total).toFixed(2)} SOL</td></tr>`).join("")
-    :emptyRow(3,"Nothing added yet. 20% of every payout lands here.");
+    :emptyRow(3,"Nothing added yet. 25% of every payout lands here.");
   $id("resBal").textContent=(+D.reserve.balance||0).toFixed(2)+" SOL";
   $id("resWallet").innerHTML=CONFIG.reserveWallet?`<a class="mono" href="https://solscan.io/account/${encodeURIComponent(CONFIG.reserveWallet)}" target="_blank" rel="noopener" style="color:inherit">${esc(shortW(CONFIG.reserveWallet))} ↗</a>`:"shown at launch";
 }
@@ -767,7 +767,7 @@ function renderCoinPage(){
     <div class="card cpPool">
       <div class="cpPoolTop"><div><div class="eyebrow">Callout pool</div><b class="cpPoolAmt">${(+c.pool).toFixed(3)} <small>/ ${THRESH} SOL</small></b></div><span class="cpPoolPct mono">${Math.round(pct)}% to next payout</span></div>
       <div class="cpBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}" aria-label="Pool progress to 1 SOL"><i style="width:${pct}%"></i></div>
-      <p>When the pool is worth 1 SOL it pays out: <b>${(THRESH*.7).toFixed(2)} SOL</b> to this round's callers, <b>${(THRESH*.1).toFixed(2)}</b> to the Top 20 and <b>${(THRESH*.2).toFixed(2)}</b> to the $EXPO reserve.${p.sym!=="SOL"?` Callers are paid in ${esc(p.sym)}.`:""}</p>
+      <p>When the pool is worth 1 SOL it pays out: <b>${(THRESH*.7).toFixed(2)} SOL</b> to this round's callers, <b>${(THRESH*.05).toFixed(2)}</b> to the Top 20 and <b>${(THRESH*.25).toFixed(2)}</b> to the $EXPO reserve.${p.sym!=="SOL"?` Callers are paid in ${esc(p.sym)}.`:""}</p>
     </div>
     <div class="statbar cpStats" role="group" aria-label="Coin stats">
       <div><small>Market cap</small><b>${fmtMC(c.mc)}</b></div>
@@ -800,8 +800,8 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if
 // ===== transparency =====
 function renderProof(){
   const W=[["Fee and payout wallet",CONFIG.botWallet,"Claims each coin's creator fees from pump.fun and sends payouts. It only holds what's waiting to be paid."],
-    ["Top 20 bonus wallet",CONFIG.top20Wallet,"Collects 10% of every payout and pays the Top 20 callers by rank."],
-    ["$EXPO buyback reserve",CONFIG.reserveWallet,"Collects 20% of every payout. It's only ever used to buy $EXPO and burn it."],
+    ["Top 20 bonus wallet",D.top20Wallet||CONFIG.top20Wallet,"Collects 5% of every payout and pays the Top 20 callers by rank once a day."],
+    ["$EXPO buyback reserve",CONFIG.reserveWallet,"Collects 25% of every payout. It's only ever used to buy $EXPO and burn it."],
     ["$EXPO token",CONFIG.xpMint,"The $EXPO contract address."]];
   $id("pfWallets").innerHTML=W.map(([n,a,d])=>`<div class="pfW"><div><b>${n}</b><p>${d}</p></div>${a?`<div class="pfA"><span class="mono">${esc(shortW(a))}</span><button class="btn sm ghost" type="button" data-copy="${esc(a)}">Copy</button><a class="btn sm ghost" href="https://solscan.io/${n.includes("token")?"token":"account"}/${encodeURIComponent(a)}" target="_blank" rel="noopener">Solscan ↗</a></div>`:`<span class="pfSoon mono">Published at launch</span>`}</div>`).join("");
   const T=D.totals||{},paid=D.payouts.reduce((a,p)=>a+(+p.sol||0),0);
@@ -849,7 +849,7 @@ function buildDemo(){
   for(let i=0;i<34;i++){const c=pick(coins),p=pick(callers),sol=+(.02+r()*.42).toFixed(3),at=now-Math.round((i*2.1+r()*2)*36e5),pl=r()<.55?"pump":"fomo";
     payouts.push({u:p.u,w:p.w,coin:c.mint,sol,pl,likes:Math.round(8+r()*120),at,tx:demoAddr(r).slice(0,44)});p.earned+=sol;if(at>now-30*864e5)p.earned30+=sol;c.paid+=sol;callersPaid+=sol}
   payouts.sort((a,b)=>b.at-a.at);
-  const nPay=Math.round(callersPaid/.7);reserve=+(callersPaid/.7*.2).toFixed(3);top20p=+(callersPaid/.7*.1).toFixed(3);claimed=+(callersPaid/.7).toFixed(3);
+  const nPay=Math.round(callersPaid/.7);reserve=+(callersPaid/.7*.25).toFixed(3);top20p=+(callersPaid/.7*.05).toFixed(3);claimed=+(callersPaid/.7).toFixed(3);
   for(let i=0;i<14;i++){const c=pick(coins),at=now-Math.round(i*1.4*36e5+r()*36e5),kind=pick(["claim","claim","payout","reserve","top20"]);activity.push({kind,coin:c.mint,sol:+(kind==="claim"?.05+r()*.3:kind==="payout"?.7:kind==="reserve"?.2:.1).toFixed(3),at,tx:demoAddr(r)})}
   activity.sort((a,b)=>b.at-a.at);
   const history=[];let tot=0;for(let d=7;d>=0;d--){const add=+(reserve/9*(.6+r()*.8)).toFixed(3);tot+=add;history.push({at:now-d*864e5,added:add,total:+tot.toFixed(3)})}
@@ -888,9 +888,9 @@ function demoTick(){
   D.coins.forEach(c=>{if(c.pool<THRESH)return;const rows=score((D.round[c.mint]||[]).map(x=>({...x})),THRESH);c.pool=+(c.pool-THRESH).toFixed(4);
     let paid=0;rows.forEach(x=>{if(x.pay<.001)return;paid+=x.pay;const tx=demoAddr(demoRng(Math.floor(r()*2e9)+1));
       D.payouts.unshift({u:x.u,w:x.w,coin:c.mint,sol:+x.pay.toFixed(3),pl:x.pl,hold:x.hold,pnl:x.pnl,at:now,tx});const cl=D.callers.find(k=>k.w===x.w);if(cl){cl.earned+=x.pay;cl.earned30+=x.pay}});
-    c.paid=+(c.paid+paid).toFixed(3);D.paidTotal=+((D.paidTotal||0)+paid).toFixed(3);D.totals.callers=+(D.totals.callers+paid).toFixed(3);D.totals.top20=+(D.totals.top20+.1).toFixed(3);D.top20Pool=+((D.top20Pool||0)+.1).toFixed(3);
-    D.reserve.balance=+(D.reserve.balance+.2).toFixed(3);D.totals.reserve=D.reserve.balance;const h=D.reserve.history[D.reserve.history.length-1];h.added=+(h.added+.2).toFixed(3);h.total=D.reserve.balance;
-    const tx=demoAddr(demoRng(Math.floor(r()*2e9)+1));D.activity.unshift({kind:"reserve",coin:c.mint,sol:.2,at:now,tx},{kind:"payout",coin:c.mint,sol:+paid.toFixed(3),at:now,tx});
+    c.paid=+(c.paid+paid).toFixed(3);D.paidTotal=+((D.paidTotal||0)+paid).toFixed(3);D.totals.callers=+(D.totals.callers+paid).toFixed(3);D.totals.top20=+(D.totals.top20+.05).toFixed(3);D.top20Pool=+((D.top20Pool||0)+.05).toFixed(3);
+    D.reserve.balance=+(D.reserve.balance+.25).toFixed(3);D.totals.reserve=D.reserve.balance;const h=D.reserve.history[D.reserve.history.length-1];h.added=+(h.added+.25).toFixed(3);h.total=D.reserve.balance;
+    const tx=demoAddr(demoRng(Math.floor(r()*2e9)+1));D.activity.unshift({kind:"reserve",coin:c.mint,sol:.25,at:now,tx},{kind:"payout",coin:c.mint,sol:+paid.toFixed(3),at:now,tx});
     D.round[c.mint]=[];c.calls=0;
     D.callouts=D.callouts.filter(x=>x.coin!==c.mint);
     demoToast(`💸 <b>$${esc(c.t)}</b> paid out <b>${paid.toFixed(2)} SOL</b> to ${rows.length} caller${rows.length===1?"":"s"}`)});
