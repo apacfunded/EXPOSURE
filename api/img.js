@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(`https://${gw}/ipfs/${cid}`, { redirect: "follow", signal: AbortSignal.timeout(15000) });
     const type = (r.headers.get("content-type") || "").split(";")[0].trim();
-    if (!r.ok || !TYPES.test(type)) return send(res, 404, { error: "not_image" });
+    if (!r.ok || !TYPES.test(type)) return send(res, 404, { error: "not_image", upstream: r.status, type: type.slice(0, 60) });
     const buf = Buffer.from(await r.arrayBuffer());
     if (buf.length > 3 * 1024 * 1024) return send(res, 413, { error: "too_big" });
     res.statusCode = 200;
