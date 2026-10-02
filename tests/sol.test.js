@@ -59,3 +59,28 @@ test("bonding curve parsing and market cap math", async () => {
   assert.ok(Math.abs(mcSol - 27.96) < 0.01); // ~28 SOL starting market cap, as on pump.fun
   assert.equal(bc.complete, false);
 });
+
+test("lookup-table compile: every instruction account decodes back to the right address and flags", async () => {
+  const crypto = await import("node:crypto");
+  process.env.POOL_MASTER_SEED ||= crypto.randomBytes(32).toString("hex");
+  const sol = await import("../lib/sol.js"), c = await import("../lib/chain.js"), { keypairFromSeed, b58encode } = await import("../lib/keys.js");
+  const user = keypairFromSeed(crypto.randomBytes(32)).publicKey, mint = keypairFromSeed(crypto.randomBytes(32)).publicKey, pool = c.poolKeypair(mint).publicKey;
+  const ataIx = sol.ix(sol.ATA_PROGRAM, [sol.W(user, true), sol.W(sol.ata(user, mint, sol.TOKEN22)), sol.R(user), sol.R(mint), sol.R(sol.SYSTEM), sol.R(sol.TOKEN22)], [1]);
+  const ixs = [sol.setComputeUnitLimit(600000), c.createV2Instruction({ mint, user, creator: pool, name: "N", symbol: "S", uri: "u" }), ataIx, c.buyExactSolInInstruction({ mint, user, creator: pool, lamports: 123 })];
+  const lut = { address: "AddressLookupTab1e1111111111111111111111111", addresses: ["11111111111111111111111111111112", ...c.LAUNCH_LUT_ADDRESSES()] };
+  const comp = sol.compileV0(user, ixs, "11111111111111111111111111111111", lut);
+  // decode
+  const m = comp.message; let o = 1; const [nSig, nSigRO, nRO] = [m[o], m[o + 1], m[o + 2]]; o += 3;
+  const rd = () => { let v = 0, s = 0; for (;;) { const b = m[o++]; v |= (b & 0x7f) << s; if (!(b & 0x80)) return v; s += 7; } };
+  const nKeys = rd(), keys = []; for (let i = 0; i < nKeys; i++) { keys.push(b58encode(m.subarray(o, o + 32))); o += 32; } o += 32;
+  const nIx = rd(), dec = []; for (let i = 0; i < nIx; i++) { const p = m[o++]; const n = rd(); const idx = [...m.subarray(o, o + n)]; o += n; const dl = rd(); o += dl; dec.push({ p, idx }); }
+  assert.equal(rd(), 1); const tbl = b58encode(m.subarray(o, o + 32)); o += 32; assert.equal(tbl, lut.address);
+  const nw = rd(), wi = [...m.subarray(o, o + nw)]; o += nw; const nr = rd(), ri = [...m.subarray(o, o + nr)]; o += nr; assert.equal(o, m.length);
+  const all = [...keys, ...wi.map(i => lut.addresses[i]), ...ri.map(i => lut.addresses[i])];
+  const isW = i => (i < nKeys ? (i < nSig ? i < nSig - nSigRO : i < nKeys - nRO) : i < nKeys + nw);
+  ixs.forEach((ix, j) => {
+    assert.equal(all[dec[j].p], ix.programId.toBase58()); assert.ok(dec[j].p < nKeys, "programs must be static");
+    ix.keys.forEach((k, n) => { const i = dec[j].idx[n]; assert.equal(all[i], k.pubkey.toBase58()); if (k.isWritable) assert.ok(isW(i), "writable " + n); if (k.isSigner) assert.ok(i < nSig); });
+  });
+  assert.equal(c.buyExactSolInInstruction({ mint, user, creator: pool, lamports: 1 }).keys.length, 18);
+});

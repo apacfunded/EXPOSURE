@@ -8,12 +8,14 @@ import { currentMcUsd } from "../../lib/mc.js";
 import { tokenBalance } from "../../lib/rpc.js";
 import { planPayout, planTop20, isWin, LAMPORTS, calloutScore } from "../../lib/payout.js";
 import { rpc } from "../../lib/rpc.js";
-import { claimFees, balance, sendFromPool, vaultBalances, sendFromTop20, top20Keypair } from "../../lib/chain.js";
+import { claimFees, balance, sendFromPool, vaultBalances, sendFromTop20, top20Keypair, ensureLaunchLut } from "../../lib/chain.js";
 
 const RENT_KEEP = 2_000_000; // leave a little in each pool wallet for rent + network fees
 
 async function tick() {
   const out = { confirmed: 0, mc: 0, judged: 0, callouts: 0 };
+  // 0) the launch lookup table that makes dev buys fit in one transaction (created once, then just found)
+  out.lut = await ensureLaunchLut().catch(e => ({ error: String(e.message).slice(0, 200) }));
   // 1) launches whose confirm call never arrived: live if the mint account exists on chain
   const pending = await db.select("coins", `confirmed=eq.false&created_at=lt.${new Date(Date.now() - 120e3).toISOString()}&created_at=gt.${new Date(Date.now() - 864e5).toISOString()}&limit=50`);
   for (const c of pending) {

@@ -14,9 +14,11 @@ export default guard(async (req, res) => {
   if (req.query && req.query.sim === "1" && chain.ok) simulation = await run(async () => {
     const c = await import("../lib/chain.js"), s = await import("../lib/sol.js");
     // fee payer: a large public exchange wallet, used only so the simulation has SOL to spend on paper
-    const b = await c.buildLaunchTx({ user: "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9", name: "Sim Test", symbol: "SIMT", uri: "https://example.com/m.json" });
+    // &dev=0.1 adds a dev buy of that many SOL (max 1 here); &long=1 uses the longest name/ticker to check size
+    const dev = Math.min(Math.max(Number(req.query.dev) || 0, 0), 1), long = req.query.long === "1";
+    const b = await c.buildLaunchTx({ user: "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9", name: long ? "N".repeat(32) : "Sim Test", symbol: long ? "SIMTESTSIMTES" : "SIMT", uri: long ? "https://gateway.pinata.cloud/ipfs/bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy" : "https://example.com/m.json", devBuyLamports: Math.round(dev * 1e9) });
     const r = await s.rpc("simulateTransaction", [b.tx, { encoding: "base64", sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" }]);
-    return { txErr: r.value.err, units: r.value.unitsConsumed, logs: (r.value.logs || []).slice(-14) };
+    return { devBuySol: dev, bytes: b.bytes, lut: dev ? ((await c.findLaunchLut().catch(() => null)) || {}).address || null : undefined, txErr: r.value.err, units: r.value.unitsConsumed, logs: (r.value.logs || []).slice(-14) };
   });
   // ?coin=MINT: public view of that coin's pool wallet and the creator fees waiting in pump.fun's vaults
   let coin = null;
