@@ -10,7 +10,7 @@ const CONFIG={
   botWallet:"",       // claims fees + sends payouts
   top20Wallet:"5GDWSMHMPQASsbMUZRwjPy2qncV5F9jBnmeXMEC6awiH",     // Top 20 bonus wallet
   extraLaunchPrograms:[], // add a program id here only if pump.fun launches need it (e.g. custom pairs)
-  xpMint:"66BhYPnx1JhqTz8N2HTzsodGDXCV5tDNcxbx2AHNpump",   // $EXPO contract address
+  xpMint:"",          // $EXPO contract address, set on launch day
   reserveWallet:"4mxjihySJSjKD21xWpz6pCMYUQ6HZGyiFbJKbQC6JHGY",   // public $EXPO buyback reserve wallet
   top20Wallet:"5GDWSMHMPQASsbMUZRwjPy2qncV5F9jBnmeXMEC6awiH"      // Top 20 bonus wallet
 };
