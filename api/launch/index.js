@@ -19,7 +19,7 @@ async function pin(blob, filename) {
   const j = await r.json().catch(() => ({}));
   const cid = j && j.data && j.data.cid;
   if (!r.ok || !cid) throw Object.assign(new Error("upload_failed"), { status: 502 });
-  return `https://${process.env.PINATA_GATEWAY || "ipfs.io"}/ipfs/${cid}`;
+  return `https://${(process.env.PINATA_GATEWAY || "gateway.pinata.cloud").replace(/^https?:\/\//, "").replace(/\/.*$/, "")}/ipfs/${cid}`;
 }
 
 // Prepares a launch. Returns a transaction the launcher's own wallet signs and pays for.

@@ -26,6 +26,8 @@ function clean(v,k,depth=0){
   if(depth>8)return null;
   if(Array.isArray(v))return v.slice(0,2000).map(x=>clean(x,k,depth+1));
   if(v&&typeof v==="object"){const o={};for(const kk of Object.keys(v)){if(kk==="__proto__"||kk==="constructor"||kk==="prototype")continue;o[kk]=clean(v[kk],kk,depth+1)}return o}
+  // "t" and "n" are numbers in some places (time, count) but text on coins (ticker, name): keep text as text
+  if((k==="t"||k==="n")&&typeof v==="string"&&!/^-?\d+(\.\d+)?$/.test(v.trim()))return v.slice(0,80);
   if(NUMK.has(k)){const n=Number(v);return Number.isFinite(n)?n:0}
   if(ENUMK[k])return ENUMK[k].includes(v)?v:ENUMK[k][0];
   if(IMGK.has(k))return safeImg(v);
@@ -76,7 +78,9 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const fmtMC=v=>v>=1e6?"$"+(v/1e6).toFixed(2)+"M":v>=1e3?"$"+Math.round(v/1e3)+"K":"$"+Math.round(v||0);
 const age=ms=>{const h=Math.max(0,(Date.now()-ms)/36e5);return h<1?Math.max(1,Math.round(h*60))+"m":h<24?Math.round(h)+"h":Math.round(h/24)+"d"};
 const avatar=(name,col,cls="")=>{const x=XIDX[name];if(x&&x.avatar)return `<div class="av ${cls} pfp" aria-hidden="true"><img src="${esc(x.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer"></div>`;return `<div class="av ${cls}" style="--c:${col||colFor(name)}" aria-hidden="true">${esc(String(name||"?")[0].toUpperCase())}</div>`};
-const coinAv=(c,cls="lg sq")=>c.img?`<div class="av ${cls}" aria-hidden="true" style="--c:${colFor(c.t)};overflow:hidden"><img src="${esc(c.img)}" alt="" style="width:100%;height:100%;object-fit:cover"></div>`:avatar(c.t,null,cls);
+const coinAv=(c,cls="lg sq")=>c.img?`<div class="av ${cls}" aria-hidden="true" style="--c:${colFor(c.t)};overflow:hidden" data-l="${esc(String(c.t||"?")[0].toUpperCase())}"><img src="${esc(c.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover"></div>`:avatar(c.t,null,cls);
+// if a coin picture fails to load, show its first letter instead of a broken image
+document.addEventListener("error",e=>{const im=e.target;if(im&&im.tagName==="IMG"&&im.parentElement&&im.parentElement.dataset.l!==undefined){const d=im.parentElement;im.remove();d.textContent=d.dataset.l}},true);
 const shortW=w=>w&&w.length>10?w.slice(0,4)+"…"+w.slice(-4):(w||"");
 const sol=(x,d=3)=>(+x||0).toFixed(d)+" SOL";
 const empty=(msg,cta)=>`<div class="empty"><p>${msg}</p>${cta||""}</div>`;
