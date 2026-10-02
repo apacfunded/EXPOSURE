@@ -18,5 +18,14 @@ export default guard(async (req, res) => {
     const r = await s.rpc("simulateTransaction", [b.tx, { encoding: "base64", sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" }]);
     return { txErr: r.value.err, units: r.value.unitsConsumed, logs: (r.value.logs || []).slice(-14) };
   });
-  send(res, 200, { node: process.version, opsWallet, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, chain, simulation });
+  // ?coin=MINT: public view of that coin's pool wallet and the creator fees waiting in pump.fun's vaults
+  let coin = null;
+  if (req.query && req.query.coin && chain.ok) coin = await run(async () => {
+    const c = await import("../lib/chain.js"), s = await import("../lib/sol.js"), k = await import("../lib/keys.js");
+    if (!k.isAddress(String(req.query.coin))) throw new Error("bad_mint");
+    const pool = c.poolKeypair(String(req.query.coin)).publicKey;
+    const v = await c.vaultBalances(pool);
+    return { poolWallet: pool, poolBalanceSol: (await s.getBalance(pool)) / 1e9, unclaimedBondingCurveSol: v.bondingCurve / 1e9, unclaimedPumpSwapSol: v.amm / 1e9, opsBalanceSol: opsWallet ? (await s.getBalance(opsWallet)) / 1e9 : null };
+  });
+  send(res, 200, { node: process.version, opsWallet, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, chain, simulation, coin });
 });
