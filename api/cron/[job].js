@@ -7,7 +7,7 @@ import { send, guard, cronAuthorized, paused } from "../../lib/http.js";
 import { allCallouts, marketCaps } from "../../lib/sources.js";
 import { planPayout, isWin, LAMPORTS } from "../../lib/payout.js";
 import { rpc } from "../../lib/rpc.js";
-import { claimFees, balance, sendFromPool } from "../../lib/chain.js";
+import { claimFees, balance, sendFromPool, vaultBalances } from "../../lib/chain.js";
 
 const RENT_KEEP = 2_000_000; // leave a little in each pool wallet for rent + network fees
 
@@ -51,8 +51,10 @@ async function claim() {
     let r;
     try { r = await claimFees(c.mint); if (r.sig) await db.insert("activity", [{ kind: "claim", mint: c.mint, wallet: c.pool_wallet, lamports: r.vault || 0, tx: r.sig }]); }
     catch (e) { r = { error: e.message }; }
+    // pool shown on the site = SOL already in the pool wallet + fees still waiting in pump.fun's vaults
     const bal = await balance(c.pool_wallet).catch(() => null);
-    if (bal !== null) await db.update("coins", `mint=${eq(c.mint)}`, { pool_lamports: Math.max(0, bal - RENT_KEEP) });
+    const waiting = await vaultBalances(c.pool_wallet).then(v => v.bondingCurve + v.amm).catch(() => 0);
+    if (bal !== null) await db.update("coins", `mint=${eq(c.mint)}`, { pool_lamports: Math.max(0, bal - RENT_KEEP) + waiting });
     out.push({ mint: c.mint, ...r });
   }
   return out;
