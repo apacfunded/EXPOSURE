@@ -48,3 +48,14 @@ test("associated token address is deterministic and off-curve", () => {
   assert.equal(x.toBase58(), y.toBase58());
   assert.ok(!isOnCurve(x.bytes));
 });
+
+test("bonding curve parsing and market cap math", async () => {
+  const { parseBondingCurve } = await import("../lib/chain.js");
+  const b = Buffer.alloc(8 + 40 + 1 + 32);
+  // pump.fun launch values: 1,073,000,000 virtual tokens, 30 virtual SOL, 1B supply
+  b.writeBigUInt64LE(1_073_000_000_000_000n, 8); b.writeBigUInt64LE(30_000_000_000n, 16); b.writeBigUInt64LE(1_000_000_000_000_000n, 40);
+  const bc = parseBondingCurve(b);
+  const mcSol = (bc.vQuote / 1e9) / (bc.vToken / 1e6) * (bc.supply / 1e6);
+  assert.ok(Math.abs(mcSol - 27.96) < 0.01); // ~28 SOL starting market cap, as on pump.fun
+  assert.equal(bc.complete, false);
+});

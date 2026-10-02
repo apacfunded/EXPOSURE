@@ -7,7 +7,7 @@ import { send, guard, cronAuthorized, paused } from "../../lib/http.js";
 import { allCallouts, marketCaps } from "../../lib/sources.js";
 import { planPayout, isWin, LAMPORTS } from "../../lib/payout.js";
 import { rpc } from "../../lib/rpc.js";
-import { claimFees, balance, sendFromPool, vaultBalances } from "../../lib/chain.js";
+import { claimFees, balance, sendFromPool, vaultBalances, curveMarketCaps } from "../../lib/chain.js";
 
 const RENT_KEEP = 2_000_000; // leave a little in each pool wallet for rent + network fees
 
@@ -21,7 +21,14 @@ async function tick() {
   }
   // 2) market caps + history
   const coins = await db.select("coins", "confirmed=eq.true&select=mint&limit=1000");
-  const mcs = await marketCaps(coins.map(c => c.mint));
+  // on-curve coins: read pump.fun's bonding curve directly; graduated coins: DexScreener
+  const mints = coins.map(c => c.mint);
+  const solUsd = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd").then(r => r.json()).then(j => +j.solana.usd || 0).catch(() => 0);
+  const curve = await curveMarketCaps(mints).catch(() => ({}));
+  const mcs = {};
+  for (const [m, v] of Object.entries(curve)) if (!v.complete && solUsd) mcs[m] = Math.round(v.mcSol * solUsd);
+  const rest = mints.filter(m => !(m in mcs));
+  if (rest.length) Object.assign(mcs, await marketCaps(rest));
   const t = new Date().toISOString();
   const hist = Object.entries(mcs).map(([mint, mc]) => ({ mint, t, mc }));
   if (hist.length) { await db.insert("mc_history", hist); out.mc = hist.length; }
