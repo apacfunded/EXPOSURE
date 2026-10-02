@@ -31,5 +31,18 @@ export default guard(async (req, res) => {
     const calls = await db.select("callouts", `mint=${eq(String(req.query.coin))}&order=posted_at.desc&limit=20&select=wallet,platform,tokens_at_call,tokens_now,pnl,weight,mc_at_call,posted_at,round_paid_at`).catch(e => ({ error: e.message, detail: e.detail }));
     return { calls, claimSim, curveMarketCapSol: curve && +curve.mcSol.toFixed(2), graduated: curve ? curve.complete : null, poolWallet: pool, poolBalanceSol: (await s.getBalance(pool)) / 1e9, unclaimedBondingCurveSol: v.bondingCurve / 1e9, unclaimedPumpSwapSol: v.amm / 1e9, opsBalanceSol: opsWallet ? (await s.getBalance(opsWallet)) / 1e9 : null };
   });
-  send(res, 200, { node: process.version, opsWallet, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, chain, simulation, coin });
+  // ?selftest=1: sign a callout with a throwaway key and run it through the real handler (never reaches the chain)
+  let selftest = null;
+  if (req.query && req.query.selftest === "1") selftest = await run(async () => {
+    const crypto = await import("node:crypto"), k = await import("../lib/keys.js"), { Readable } = await import("node:stream");
+    const kp = k.keypairFromSeed(crypto.randomBytes(32)), mint = String(req.query.coin || "");
+    if (!k.isAddress(mint)) throw new Error("pass ?coin=MINT too");
+    const message = ["Exposure callout", "Coin: " + mint, "Wallet: " + kp.publicKey, "Time: " + new Date().toISOString()].join("\n");
+    const signature = Buffer.from(kp.sign(new TextEncoder().encode(message))).toString("base64");
+    const body = JSON.stringify({ mint, wallet: kp.publicKey, message, signature });
+    const r = Readable.from([Buffer.from(body)]); Object.assign(r, { method: "POST", headers: { host: req.headers.host, "content-type": "application/json" }, query: {} });
+    const out = await new Promise(resolve => { const res2 = { statusCode: 200, h: {}, setHeader(a, b) { this.h[a] = b; }, end(b) { resolve({ status: this.statusCode, body: b && JSON.parse(b) }); }, get headersSent() { return false; } }; import("./callout.js").then(m => m.default(r, res2)); });
+    return { status: out.status, body: out.body, expected: "403 with a 'Hold at least' message means signing, rate limiting and the holder check all work" };
+  });
+  send(res, 200, { node: process.version, opsWallet, launchesEnabled: process.env.LAUNCHES_ENABLED === "1", env, chain, simulation, coin, selftest });
 });
