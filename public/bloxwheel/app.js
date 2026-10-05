@@ -1,7 +1,7 @@
 /* ===== Swap this object for real data at launch ===== */
 const DATA = {
   example: true,
-  ticker: "$BLOXSTRAT",
+  ticker: "$BLOXWHEEL",
   ca: null,                         // contract address, e.g. "AbC...pump"
   buyUrl: null,                     // pump.fun coin page
   treasury: "7xKXbS4qPz3mNf9vR2tLwYcE8hJd5uGa1oBnQk6TpMs",
