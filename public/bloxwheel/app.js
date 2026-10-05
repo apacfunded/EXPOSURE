@@ -2,8 +2,8 @@
 const DATA = {
   example: true,
   ticker: "$BLOXWHEEL",
-  ca: null,                         // contract address, e.g. "AbC...pump"
-  buyUrl: null,                     // pump.fun coin page
+  ca: "EAcG79RHRKvwXSrPvRkxez1JFcxAW7PRzwfJ6H9Zpump",
+  buyUrl: "https://pump.fun/coin/EAcG79RHRKvwXSrPvRkxez1JFcxAW7PRzwfJ6H9Zpump",
   treasury: "7xKXbS4qPz3mNf9vR2tLwYcE8hJd5uGa1oBnQk6TpMs",
   solscan: "https://solscan.io",
   supply: 1_000_000_000,
