@@ -59,5 +59,17 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/bloxstrategy",
+      "destination": "/bloxwheel/",
+      "permanent": true
+    },
+    {
+      "source": "/bloxstrategy/:path*",
+      "destination": "/bloxwheel/:path*",
+      "permanent": true
+    }
   ]
 }
