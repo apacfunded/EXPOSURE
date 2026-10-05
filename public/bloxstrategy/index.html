@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BloxStrategy</title>
+<meta name="description" content="Creator fees buy Roblox Limiteds. Items sell at a profit target and the profit buys back and burns $BLOXSTRAT.">
+<meta name="theme-color" content="#050506">
+<link rel="icon" href="/bloxstrategy/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&family=Figtree:wght@400;500&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/bloxstrategy/style.css">
+</head>
+<body>
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="BloxStrategy home">
+      <svg viewBox="0 0 1024 1024" aria-hidden="true">
+        <defs>
+          <linearGradient id="lgT" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d9dde3"/></linearGradient>
+          <linearGradient id="lgL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9ced6"/><stop offset="1" stop-color="#8d939d"/></linearGradient>
+          <linearGradient id="lgR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa0aa"/><stop offset="1" stop-color="#5c616a"/></linearGradient>
+          <linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f9"/><stop offset=".5" stop-color="#a7adb7"/><stop offset="1" stop-color="#e6e9ee"/></linearGradient>
+        </defs>
+        <rect width="1024" height="1024" rx="240" fill="#000"/>
+        <g fill="none" stroke="url(#lgA)" stroke-width="56" stroke-linecap="round"><path d="M512 182A330 330 0 0 1 820 630"/><path d="M512 842A330 330 0 0 1 204 394"/></g>
+        <g fill="url(#lgA)"><path d="M780 672 870 596 758 576Z"/><path d="M244 352 154 428 266 448Z"/></g>
+        <g transform="translate(512 520)"><path d="M0-190 165-95 0 0-165-95Z" fill="url(#lgT)"/><path d="M-165-95 0 0 0 190-165 95Z" fill="url(#lgL)"/><path d="M165-95 0 0 0 190 165 95Z" fill="url(#lgR)"/></g>
+      </svg>
+      BloxStrategy
+    </a>
+    <nav class="links" aria-label="Sections">
+      <a href="#proof">Proof</a><a href="#positions">Positions</a><a href="#simulator">Simulator</a><a href="#burns">Burns</a><a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-end">
+      <button class="btn icon" type="button" id="themeBtn" aria-label="Switch theme" title="Switch theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+      </button>
+      <a class="btn primary sm" id="buyNav" href="#top">Buy $BLOXSTRAT</a>
+    </div>
+  </div>
+</header>
+<div class="banner" id="banner"><div class="wrap"><span class="pulse"></span><span><b>Example data until launch.</b> Numbers, items and links are placeholders.</span></div></div>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="tagline"><i></i>Roblox Limiteds treasury on Solana</span> <a class="tagline exl" href="https://exposurepad.lol" target="_blank" rel="noopener" style="text-decoration:none;margin-left:6px">Launched on Exposure <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
+        <h1>Volume buys Limiteds. <span>Profit burns the supply.</span></h1>
+        <p class="lede">Creator fees buy Roblox items. Each item sells once it's up by the target, and the profit buys back and burns $BLOXSTRAT.</p>
+        <div class="ctas">
+          <a class="btn primary" id="buyHero" href="#top">Buy $BLOXSTRAT</a>
+          <a class="btn" id="walletHero" href="#proof">View treasury wallet</a>
+        </div>
+        <div class="ca">
+          <span class="k">CA</span>
+          <code id="caText">Posts at launch</code>
+          <button class="btn sm" type="button" id="copyCa">Copy</button>
+        </div>
+        <div class="kpis">
+          <a class="kpi" href="#proof"><div class="k">Treasury value</div><div class="v" id="kTreasury">–</div><div class="s" id="kTreasurySub">–</div></a>
+          <a class="kpi" href="#burns"><div class="k">Realised profit</div><div class="v" id="kProfit">–</div><div class="s" id="kProfitSub">–</div></a>
+          <a class="kpi" href="#burns"><div class="k">Supply burned</div><div class="v" id="kBurn">–</div><div class="s" id="kBurnSub">–</div></a>
+        </div>
+      </div>
+
+      <div class="wheel-card">
+        <div class="wheel-top"><span class="t">The flywheel</span><span class="live" id="cycle">Running</span></div>
+        <div class="wheel" id="wheel">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="34" fill="none" stroke="var(--line-strong)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+            <circle cx="50" cy="50" r="27" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="1 2.2" vector-effect="non-scaling-stroke"/>
+            <circle cx="50" cy="50" r="20" fill="var(--inset)" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+            <g id="chev"></g>
+            <g class="orbit">
+              <circle cx="50" cy="50" r="34" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="18 195.6" transform="rotate(-120.3 50 50)" vector-effect="non-scaling-stroke" opacity=".9"/>
+              <circle cx="50" cy="16" r="1.9" fill="var(--accent)"/>
+              <circle cx="50" cy="16" r="3.6" fill="var(--accent)" opacity=".18"/>
+            </g>
+          </svg>
+          <div class="core"><div class="k">Supply burned</div><div class="v" id="coreBurn">–</div><div class="s" id="coreSub">–</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt" id="proof">
+    <div class="wrap">
+      <div class="sec-head"><div><div class="eyebrow">Live proof</div><h2>Check every number yourself</h2><p class="sec-sub">The treasury wallet is public. Every buy, sale and burn links to its transaction.</p></div></div>
+      <div class="proof" id="proofCards"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="positions">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Inventory</div><h2>Positions</h2><p class="sec-sub" id="posSub">Each item is held until its Rolimons value is up by the target.</p></div>
+        <div class="toolbar">
+          <div class="chips" role="group" aria-label="Filter positions" id="chips"></div>
+          <label class="sort" for="sortSel">Sort
+            <select id="sortSel"><option value="progress">Closest to target</option><option value="pl">Biggest gain</option><option value="value">Highest value</option></select>
+          </label>
+        </div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Item</th><th class="r">Cost</th><th class="r">Rolimons value</th><th class="r">Gain</th><th>Toward target</th><th>Status</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table></div>
+      <div class="cards" id="cards"></div>
+      <p class="art-note">Item art is placeholder until real thumbnails are added.</p>
+    </div>
+  </section>
+
+  <section class="sec alt" id="simulator">
+    <div class="wrap">
+      <div class="sec-head"><div><div class="eyebrow">What if</div><h2>Take-profit simulator</h2><p class="sec-sub">Move the target to see which items would sell today and how much would be burned. The live target is fixed at launch.</p></div></div>
+      <div class="sim">
+        <div class="card">
+          <label for="target">Sell when an item is up <output id="tOut" for="target">+50%</output></label>
+          <div class="range">
+            <input type="range" id="target" min="30" max="150" step="5" value="50">
+            <span class="be" id="beMark">Break-even +43%</span>
+          </div>
+          <p class="note">Roblox keeps about 30% of every resale. An item has to be up about 43% just to break even.</p>
+        </div>
+        <div class="card">
+          <div class="outcome">
+            <div><div class="k">Items that would sell</div><div class="v" id="oCount">–</div></div>
+            <div><div class="k">Sale price</div><div class="v" id="oGross">–</div></div>
+            <div><div class="k">Profit after Roblox fee</div><div class="v" id="oProfit">–</div></div>
+            <div><div class="k">Estimated burn</div><div class="v" id="oBurn">–</div></div>
+          </div>
+          <div class="would" id="oItems"></div>
+          <div class="warn" id="oWarn" hidden></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="burns">
+    <div class="wrap split">
+      <div>
+        <div class="eyebrow">Burn log</div><h2>Every burn, in order</h2>
+        <p class="sec-sub" style="margin-bottom:28px">Profit from each sale buys $BLOXSTRAT on the open market and burns it.</p>
+        <ol class="timeline" id="timeline"></ol>
+      </div>
+      <div>
+        <div class="eyebrow">How it works</div><h2>Four steps, on repeat</h2>
+        <p class="sec-sub" style="margin-bottom:28px">The item's original cost goes back into the treasury to buy the next one.</p>
+        <ol class="steps">
+          <li><span class="n">1</span><div><b>Trade $BLOXSTRAT</b><p>Every buy and sell on pump.fun pays creator fees to the treasury.</p></div></li>
+          <li><span class="n">2</span><div><b>Fees buy Limiteds</b><p>The treasury buys items with a Rolimons value and steady weekly sales.</p></div></li>
+          <li><span class="n">3</span><div><b>Hold to the target</b><p>Nothing sells until it's up by the target, which is set above the ~43% break-even.</p></div></li>
+          <li><span class="n">4</span><div><b>Sell, buy back, burn</b><p>The profit buys $BLOXSTRAT and burns it. Each burn is posted with its Solscan link.</p></div></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec alt" id="faq">
+    <div class="wrap">
+      <div class="sec-head"><div><div class="eyebrow">FAQ</div><h2>Questions</h2></div></div>
+      <div class="faq" id="faqList">
+        <details><summary>Where do the fees come from?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>pump.fun pays the coin creator a share of trading volume. All of it goes to the public treasury wallet.</p></details>
+        <details><summary>Which items does the treasury buy?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Only Limiteds with a Rolimons value and steady weekly sales. No projected items, never above value, and no more than 20% of the treasury in one item. Every buy is posted with its cost.</p></details>
+        <details><summary>Why is the target +50%?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Roblox keeps about 30% of every resale. An item bought at 100 and sold at 150 nets about 105, so +50% leaves a small profit to burn. Anything under about +43% loses money.</p></details>
+        <details><summary>What if an item never hits the target?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>It stays in inventory. After 90 days it may be sold at break-even after fees to free up funds. Items are never sold at a loss.</p></details>
+        <details><summary>How do I verify burns?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></summary><p>Every burn in the log links to its Solscan transaction. A weekly recap on X covers fees in, items held and total burned.</p></details>
+      </div>
+      <div class="risk">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17h.01"/></svg></span>
+        <div><b>Read before you buy</b><p>Roblox items can lose value, and Roblox's rules restrict trading items for real money, so the account holding the inventory could be restricted. This is a memecoin, not an investment, and nothing here promises returns. Only buy what you can afford to lose.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>BloxStrategy · $BLOXSTRAT · Launched on <a class="exl" href="https://exposurepad.lol" target="_blank" rel="noopener">Exposure (exposurepad.lol)</a></span><span>Not affiliated with Roblox Corporation or Rolimons.</span></div></footer>
+<script src="/bloxstrategy/app.js"></script>
+</body>
+</html>
