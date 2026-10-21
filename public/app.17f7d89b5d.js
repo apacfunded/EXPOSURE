@@ -1093,3 +1093,11 @@ document.getElementById("f").addEventListener("submit",e=>{
     .catch(()=>{m.className="msg err";m.textContent="We couldn't load callouts right now. Try again in a minute.";box.hidden=true});
 });
 
+
+// background that follows the cursor: eases toward the pointer, only redraws while moving
+(function(){const fx=document.querySelector(".bgfx");if(!fx||!matchMedia("(hover:hover)").matches||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  let tx=innerWidth/2,ty=innerHeight*.3,x=tx,y=ty,raf=0;
+  const step=()=>{x+=(tx-x)*.12;y+=(ty-y)*.12;fx.style.setProperty("--mx",x.toFixed(1)+"px");fx.style.setProperty("--my",y.toFixed(1)+"px");raf=(Math.abs(tx-x)+Math.abs(ty-y)>.5)?requestAnimationFrame(step):0};
+  addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;tx=e.clientX;ty=e.clientY;fx.classList.add("on");if(!raf)raf=requestAnimationFrame(step)},{passive:true});
+  document.documentElement.addEventListener("mouseleave",()=>fx.classList.remove("on"));
+})();
