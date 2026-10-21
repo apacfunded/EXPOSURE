@@ -100,3 +100,16 @@ test("callout: must sign, must hold the coin, one per round", async () => {
   assert.equal((await call(callout, { body: wrongCoin })).status, 401);
   expoBal = 10;
 });
+
+test("CORS: orch.lol may post, other sites may not; GET is public; preflight answers 204", async () => {
+  const { sameOrigin, cors, guard } = await import("../lib/http.js");
+  const mk = (method, origin) => ({ method, headers: { host: "exposurepad.lol", ...(origin ? { origin } : {}) } });
+  const res = () => { const h = {}; return { h, statusCode: 200, setHeader(k, v) { h[k] = v; }, end() { this.ended = true; }, get headersSent() { return false; } }; };
+  assert.ok(sameOrigin(mk("POST", "https://orch.lol"))); assert.ok(sameOrigin(mk("POST", "https://exposurepad.lol")));
+  assert.ok(!sameOrigin(mk("POST", "https://evil.example"))); assert.ok(!sameOrigin(mk("POST", "https://orch.lol.evil.example")));
+  let r = res(); cors(mk("POST", "https://evil.example"), r); assert.equal(r.h["Access-Control-Allow-Origin"], undefined);
+  r = res(); cors(mk("POST", "https://orch.lol"), r); assert.equal(r.h["Access-Control-Allow-Origin"], "https://orch.lol");
+  r = res(); cors(mk("GET", "https://anything.example"), r); assert.equal(r.h["Access-Control-Allow-Origin"], "*");
+  let ran = false; r = res(); await guard(async () => { ran = true; })(mk("OPTIONS", "https://orch.lol"), r);
+  assert.equal(r.statusCode, 204); assert.ok(!ran);
+});
