@@ -4,7 +4,7 @@ import { tokenBalance } from "../lib/rpc.js";
 import { isAddress } from "../lib/keys.js";
 import { send, allow, guard, readJson, sameOrigin, limited, paused } from "../lib/http.js";
 
-// Rate a ranked caller 1-5 stars. Signed by the rater's wallet, which must hold $EXPO. One rating per wallet per caller (re-rating replaces it).
+// Rate a ranked caller 1-5 stars. Signed by the rater's wallet, which must hold a Calls coin. One rating per wallet per caller (re-rating replaces it).
 export default guard(async (req, res) => {
   if (!allow(req, res, "POST")) return;
   if (paused()) return send(res, 503, { error: "paused" });
@@ -14,7 +14,7 @@ export default guard(async (req, res) => {
   const stars = Number(b.stars);
   if (!isAddress(b.caller) || !Number.isInteger(stars) || stars < 1 || stars > 5) return send(res, 400, { error: "bad_request" });
   if (b.caller === b.wallet) return send(res, 400, { error: "self_rating" });
-  const v = parseSigned(b, "Exposure rating");
+  const v = parseSigned(b, "Calls rating");
   if (v.error) return send(res, 401, { error: v.error });
   if (v.fields.Caller !== b.caller || v.fields.Stars !== String(stars)) return send(res, 401, { error: "bad_message" });
 

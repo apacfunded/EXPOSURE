@@ -45,7 +45,7 @@ export default guard(async (req, res) => {
     const crypto = await import("node:crypto"), k = await import("../lib/keys.js"), { Readable } = await import("node:stream");
     const kp = k.keypairFromSeed(crypto.randomBytes(32)), mint = String(req.query.coin || "");
     if (!k.isAddress(mint)) throw new Error("pass ?coin=MINT too");
-    const message = ["Exposure callout", "Coin: " + mint, "Wallet: " + kp.publicKey, "Time: " + new Date().toISOString()].join("\n");
+    const message = ["Calls callout", "Coin: " + mint, "Wallet: " + kp.publicKey, "Time: " + new Date().toISOString()].join("\n");
     const signature = Buffer.from(kp.sign(new TextEncoder().encode(message))).toString("base64");
     const body = JSON.stringify({ mint, wallet: kp.publicKey, message, signature });
     const r = Readable.from([Buffer.from(body)]); Object.assign(r, { method: "POST", headers: { host: req.headers.host, "content-type": "application/json" }, query: {} });

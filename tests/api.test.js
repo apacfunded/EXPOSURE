@@ -35,7 +35,7 @@ function call(handler, { method = "POST", body, query = {}, headers = {} }) {
 const rater = keypairFromSeed(crypto.randomBytes(32)), caller = keypairFromSeed(crypto.randomBytes(32));
 T.callouts[0].wallet = caller.publicKey;
 const signed = (lines, k = rater) => { const message = lines.join("\n"); return { wallet: k.publicKey, message, signature: Buffer.from(k.sign(new TextEncoder().encode(message))).toString("base64") }; };
-const rateBody = (stars = 4) => ({ caller: caller.publicKey, stars, ...signed(["Exposure rating", `Caller: ${caller.publicKey}`, `Stars: ${stars}`, `Wallet: ${rater.publicKey}`, `Time: ${new Date().toISOString()}`]) });
+const rateBody = (stars = 4) => ({ caller: caller.publicKey, stars, ...signed(["Calls rating", `Caller: ${caller.publicKey}`, `Stars: ${stars}`, `Wallet: ${rater.publicKey}`, `Time: ${new Date().toISOString()}`]) });
 
 test("rate: valid holder rating is saved; replay refused; non-holder refused; other origin refused; forged stars refused", async () => {
   const { default: rate } = await import("../api/rate.js");
@@ -51,7 +51,7 @@ test("rate: valid holder rating is saved; replay refused; non-holder refused; ot
 
 test("x link: returns an x.com URL with PKCE and only same-site return paths", async () => {
   const { default: link } = await import("../api/x/link.js");
-  const b = { ...signed(["Link an X account to Exposure", `Wallet: ${rater.publicKey}`, `Time: ${new Date().toISOString()}`]), returnTo: "https://evil.test/steal" };
+  const b = { ...signed(["Link an X account to Calls", `Wallet: ${rater.publicKey}`, `Time: ${new Date().toISOString()}`]), returnTo: "https://evil.test/steal" };
   const r = await call(link, { body: b });
   assert.equal(r.status, 200);
   const u = new URL(r.body.url);
@@ -90,7 +90,7 @@ test("callout: must sign, must hold the coin, one per round", async () => {
   const { default: callout } = await import("../api/callout.js");
   const mint = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
   T.coins.push({ mint, ticker: "TEST", confirmed: true, mc: 5000 });
-  const body = () => ({ mint, ...signed(["Exposure callout", `Coin: ${mint}`, `Wallet: ${rater.publicKey}`, `Time: ${new Date().toISOString()}`]) });
+  const body = () => ({ mint, ...signed(["Calls callout", `Coin: ${mint}`, `Wallet: ${rater.publicKey}`, `Time: ${new Date().toISOString()}`]) });
   expoBal = 10; let r = await call(callout, { body: body() });
   assert.equal(r.status, 403); assert.match(r.body.error, /Hold at least/);
   T.callouts.length = 0; expoBal = 2_000_000; r = await call(callout, { body: body() });

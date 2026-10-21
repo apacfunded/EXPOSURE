@@ -14,7 +14,7 @@ export default guard(async (req, res) => {
   const { X_CLIENT_ID, SITE_URL } = process.env;
   if (!X_CLIENT_ID || !SITE_URL) return send(res, 503, { error: "x_not_ready" });
   const b = await readJson(req);
-  const v = parseSigned(b, "Link an X account to Exposure");
+  const v = parseSigned(b, "Link an X account to Calls");
   if (v.error) return send(res, 401, { error: v.error });
   if (!(await useSignatureOnce(v.sigHash, "xlink"))) return send(res, 409, { error: "replayed" });
 

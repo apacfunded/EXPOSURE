@@ -6,7 +6,7 @@ import { currentMcUsd } from "../lib/mc.js";
 import { calloutScore } from "../lib/payout.js";
 import { send, allow, guard, readJson, sameOrigin, limited, paused } from "../lib/http.js";
 
-// Post a callout on Exposure. Signed by the caller's wallet, which must hold the coin.
+// Post a callout on Calls. Signed by the caller's wallet, which must hold the coin.
 // One open callout per wallet per coin each round. Score = holdings × PnL (see lib/payout.js).
 const MIN_PCT = () => Number(process.env.CALLOUT_MIN_PCT || "0.01"); // minimum bag, % of supply (0.01% = 100k tokens)
 
@@ -17,13 +17,13 @@ export default guard(async (req, res) => {
   if (await limited(req, res, "callout", 10, 600)) return;
   const b = await readJson(req);
   if (!isAddress(b.mint)) return send(res, 400, { error: "bad_request" });
-  const v = parseSigned(b, "Exposure callout");
+  const v = parseSigned(b, "Calls callout");
   if (v.error) return send(res, 401, { error: v.error === "expired" ? "That signature expired. Try again." : "Your wallet signature didn't check out. Try again." });
   if (v.fields.Coin !== b.mint) return send(res, 401, { error: "Your wallet signature didn't check out. Try again." });
   const note = String(v.fields.Note || "").slice(0, 140);
 
   const coin = (await db.select("coins", `mint=${eq(b.mint)}&confirmed=eq.true`))[0];
-  if (!coin) return send(res, 404, { error: "That coin isn't on Exposure." });
+  if (!coin) return send(res, 404, { error: "That coin isn't on Calls." });
   const held = await tokenBalance(b.wallet, b.mint);
   if (held < 1e9 * MIN_PCT() / 100) return send(res, 403, { error: `Hold at least ${(1e9 * MIN_PCT() / 100).toLocaleString("en-US")} $${coin.ticker} to call it out.` });
   const open = await db.select("callouts", `wallet=${eq(b.wallet)}&mint=${eq(b.mint)}&round_paid_at=is.null&limit=1`);

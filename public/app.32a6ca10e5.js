@@ -10,8 +10,8 @@ const CONFIG={
   botWallet:"",       // claims fees + sends payouts
   top20Wallet:"5GDWSMHMPQASsbMUZRwjPy2qncV5F9jBnmeXMEC6awiH",     // Top 20 bonus wallet
   extraLaunchPrograms:[], // add a program id here only if pump.fun launches need it (e.g. custom pairs)
-  xpMint:"",          // $EXPO contract address, set on launch day
-  reserveWallet:"4mxjihySJSjKD21xWpz6pCMYUQ6HZGyiFbJKbQC6JHGY",   // public $EXPO buyback reserve wallet
+  xpMint:"",          // $CALLS contract address, set on launch day
+  reserveWallet:"4mxjihySJSjKD21xWpz6pCMYUQ6HZGyiFbJKbQC6JHGY",   // public $CALLS buyback reserve wallet
   top20Wallet:"5GDWSMHMPQASsbMUZRwjPy2qncV5F9jBnmeXMEC6awiH"      // Top 20 bonus wallet
 };
 let DEMO_ON=false,demoTimer=null,DEMO_ME=null,XIDX={},LAST_STATE_TXT="";
@@ -61,7 +61,7 @@ function checkLaunchTx(vtx,me){
   return null;
 }
 
-const W={exposure:1,pump:.45,fomo:.35,gmgn:.20},CAP=.5,THRESH=1,BONUS=n=>Math.min(1+.25*(n-1),1.75),NAMES={exposure:"Exposure",pump:"pump.fun",fomo:"Fomo",gmgn:"GMGN"};
+const W={exposure:1,pump:.45,fomo:.35,gmgn:.20},CAP=.5,THRESH=1,BONUS=n=>Math.min(1+.25*(n-1),1.75),NAMES={exposure:"Calls",pump:"pump.fun",fomo:"Fomo",gmgn:"GMGN"};
 const fHold=x=>{const v=+x.hold||0;return v>=0.01?v.toFixed(2)+"%":v>0?"<0.01%":"0%"},fPnl=x=>{const v=+x.pnl||0;return (v>=0?"+":"")+Math.round(v)+"%"},callLine=x=>`${fHold(x)} held · ${fPnl(x)} since call`;
 const COLORS=["#3c7d0e","#5f8f10","#0e6a4c","#2f6b1a","#7a9a12","#14553a","#4d7a0a","#21602a"];
 const colFor=s=>COLORS[[...String(s)].reduce((a,c)=>a+c.charCodeAt(0),0)%COLORS.length];
@@ -95,7 +95,7 @@ const payRow=x=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay">${a
 function renderPays(){
   const p=D.payouts;
   $id("recentPays").innerHTML=p.length?p.slice(0,6).map(payRow).join(""):empty("No payouts yet. The first one goes out when a coin's pool reaches 1 SOL.");
-  $id("allPays").innerHTML=p.length?p.map(payRow).join(""):empty("No payouts yet. Every payout will show here with its Solscan transaction.",`<a class="btn sm sig" href="#launch">Expose a coin <span class="arr" aria-hidden="true">→</span></a>`);
+  $id("allPays").innerHTML=p.length?p.map(payRow).join(""):empty("No payouts yet. Every payout will show here with its Solscan transaction.",`<a class="btn sm sig" href="#launch">Launch a coin <span class="arr" aria-hidden="true">→</span></a>`);
   const tw=$id("track").closest("section > div")||$id("track").parentElement.parentElement;
   if(p.length){const tk=p.slice(0,12).map(x=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="tk">${avatar(x.u)}<span>${uL(x.u,x.w)}</span><b>+${(+x.sol).toFixed(3)} SOL</b><span>$${esc(c.t)}</span></div>`}).join("");$id("track").innerHTML=tk+tk;tw.hidden=false}
   else{$id("track").innerHTML="";tw.hidden=true}
@@ -104,10 +104,10 @@ function renderPays(){
 // caller ranks: win = coin hits 1.5x from callout market cap within 24h; ranked by Wilson lower bound
 const TIERS=[
   {n:"Oracle",min:.62,calls:25,c:"#ffd27a",c2:"#b8862e",perk:"The best in the trenches"},
-  {n:"Elite",min:.5,c:"#ff9a4d",c2:"#b4521a",perk:"Wins more than they miss"},
-  {n:"Sharp",min:.38,c:"#e0a27a",c2:"#8e5434",perk:"Reliably early"},
-  {n:"Caller",min:.25,c:"#b5998a",c2:"#6d574b",perk:"Finding their edge"},
-  {n:"Rookie",min:0,c:"#857469",c2:"#4a3e37",perk:"Every caller starts here"}];
+  {n:"Elite",min:.5,c:"#4dffa0",c2:"#1ab462",perk:"Wins more than they miss"},
+  {n:"Sharp",min:.38,c:"#7ad4e0",c2:"#2f6f78",perk:"Reliably early"},
+  {n:"Caller",min:.25,c:"#95aaa5",c2:"#536561",perk:"Finding their edge"},
+  {n:"Rookie",min:0,c:"#6f7f7b",c2:"#3b4643",perk:"Every caller starts here"}];
 TIERS.forEach((t,i)=>t.lvl=TIERS.length-i);
 function wilson(w,n){if(!n)return 0;const z=1.64,p=w/n;return (p+z*z/(2*n)-z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n)))/(1+z*z/n)}
 function tierFor(w,n){if(n<10)return null;const lb=wilson(w,n);for(const T of TIERS){if(lb>=T.min&&(!T.calls||n>=T.calls))return T}return TIERS[TIERS.length-1]}
@@ -121,16 +121,16 @@ function callerRanks(period){
 // emblem: faceted hexagon in the tier's metal, with one chevron per level (star for Oracle)
 let emSeq=0;
 function emblem(t,size=40){
-  const T=t||{n:"Unranked",c:"#5a4c44",c2:"#2e2621",lvl:0},id="em"+(emSeq++);
+  const T=t||{n:"Unranked",c:"#495552",c2:"#242b29",lvl:0},id="em"+(emSeq++);
   const hex=(r)=>{const pts=[];for(let k=0;k<6;k++){const a=Math.PI/180*(60*k-90);pts.push((24+r*Math.cos(a)).toFixed(2)+","+(24+r*Math.sin(a)).toFixed(2))}return pts.join(" ")};
   let marks="";
   if(T.lvl===5)marks=`<path d="M24 13.5l3 6.2 6.8.9-5 4.7 1.3 6.7L24 28.8l-6.1 3.2 1.3-6.7-5-4.7 6.8-.9z" fill="url(#${id})"/>`;
   else for(let k=0;k<T.lvl;k++){const y=30-k*5.2+(T.lvl-1)*2.6;marks+=`<path d="M16.5 ${y}l7.5-4.6 7.5 4.6" fill="none" stroke="url(#${id})" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`}
-  if(!t)marks=`<path d="M19 24h10" stroke="#6f625a" stroke-width="2.6" stroke-linecap="round"/>`;
+  if(!t)marks=`<path d="M19 24h10" stroke="#5f6a67" stroke-width="2.6" stroke-linecap="round"/>`;
   return `<svg class="emblem" width="${size}" height="${size}" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${T.c}"/><stop offset=".55" stop-color="${T.c2}"/><stop offset="1" stop-color="${T.c}"/></linearGradient></defs>
-    <polygon points="${hex(22)}" fill="url(#${id})"/><polygon points="${hex(18.5)}" fill="#160f0b"/><polygon points="${hex(18.5)}" fill="none" stroke="${T.c}" stroke-opacity=".25"/>${marks}</svg>`;
+    <polygon points="${hex(22)}" fill="url(#${id})"/><polygon points="${hex(18.5)}" fill="#0f1211"/><polygon points="${hex(18.5)}" fill="none" stroke="${T.c}" stroke-opacity=".25"/>${marks}</svg>`;
 }
-const badge=t=>`<span class="badge" style="--tc:${t?t.c:"#6f625a"}">${emblem(t,18)}${t?t.n:"Unranked"}</span>`;
+const badge=t=>`<span class="badge" style="--tc:${t?t.c:"#5f6a67"}">${emblem(t,18)}${t?t.n:"Unranked"}</span>`;
 function nextStep(c){
   if(c.n<10){const k=10-c.n;return{txt:`${k} more call${k>1?"s":""} to get ranked`,pct:c.n/10,next:TIERS[TIERS.length-1]}}
   const i=TIERS.indexOf(c.tier);if(i<=0)return{txt:"Top rank. Keep the rating above 62 to hold it.",pct:1,next:null};
@@ -156,9 +156,9 @@ function renderRanks(){
 }
 function showMyRank(c,wal){
   const box=$id("rkMe"),m=$id("rkMsg");
-  if(!c||!c.n){m.className="msg";m.textContent="No calls from this wallet yet. Hold an Exposure coin and post a callout to start your record.";box.hidden=true;return}
+  if(!c||!c.n){m.className="msg";m.textContent="No calls from this wallet yet. Hold a Calls coin and post a callout to start your record.";box.hidden=true;return}
   const st=nextStep(c);m.className="msg";m.textContent="";
-  box.innerHTML=`<div class="me" style="--tc:${c.tier?c.tier.c:"#6f625a"}">${emblem(c.tier,72)}<div><div class="eyebrow">${rkP==="all"?"All time":"Last 30 days"}</div><b class="meT">${c.tier?c.tier.n:"Unranked"}</b><span>@${esc(c.u||shortW(wal))}</span></div></div>
+  box.innerHTML=`<div class="me" style="--tc:${c.tier?c.tier.c:"#5f6a67"}">${emblem(c.tier,72)}<div><div class="eyebrow">${rkP==="all"?"All time":"Last 30 days"}</div><b class="meT">${c.tier?c.tier.n:"Unranked"}</b><span>@${esc(c.u||shortW(wal))}</span></div></div>
     <div class="meStats"><div><small>Rating</small><b>${Math.round(c.lb*100)}</b></div><div><small>Win rate</small><b>${Math.round(c.wr*100)}%</b></div><div><small>Wins / calls</small><b>${c.won} / ${c.n}</b></div><div><small>Best call</small><b>${c.best}×</b></div></div><div class="meStars">${starLine(c,true)}</div>
     <div class="rkProg"><div class="bar"><i style="width:${Math.round(st.pct*100)}%"></i></div><p>${st.txt}</p></div>`;
   box.hidden=false;
@@ -196,21 +196,21 @@ const b64=u8=>{let s="";u8.forEach(x=>s+=String.fromCharCode(x));return btoa(s)}
 $id("rateGo").addEventListener("click",async()=>{
   const m=$id("rateMsg"),pick=document.querySelector('#starPick input:checked');
   if(!pick){m.className="msg err";m.textContent="Pick a star rating first.";$id("st5").focus();return}
-  if(!CONFIG.api){m.className="msg";m.textContent="Ratings open when Exposure goes live. Your pick isn't saved yet.";return}
+  if(!CONFIG.api){m.className="msg";m.textContent="Ratings open when Calls goes live. Your pick isn't saved yet.";return}
   const prov=walletProvider();
-  if(!prov){if(openInWalletApp())return;m.className="msg err";m.textContent="No Solana wallet found in this browser. Open Exposure in Phantom, Solflare or Backpack, or install one, then try again.";return}
+  if(!prov){if(openInWalletApp())return;m.className="msg err";m.textContent="No Solana wallet found in this browser. Open Calls in Phantom, Solflare or Backpack, or install one, then try again.";return}
   const stars=+pick.value,go=$id("rateGo");go.disabled=true;
   try{
     m.className="msg";m.textContent="Approve the connection in your wallet…";
     const conn=await prov.connect();const me=String((conn&&conn.publicKey)||prov.publicKey);
     if(me===rateFor.w){m.className="msg err";m.textContent="You can't rate your own calls.";return}
-    const msg=`Exposure rating\nCaller: ${rateFor.w}\nStars: ${stars}\nWallet: ${me}\nTime: ${new Date().toISOString()}`;
+    const msg=`Calls rating\nCaller: ${rateFor.w}\nStars: ${stars}\nWallet: ${me}\nTime: ${new Date().toISOString()}`;
     m.textContent="Sign the message in your wallet. It's free and sends nothing.";
     const signed=await prov.signMessage(new TextEncoder().encode(msg),"utf8");
     const sig=signed&&signed.signature?signed.signature:signed;
     const r=await fetch(CONFIG.api.replace(/\/$/,"")+"/rate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({caller:rateFor.w,stars,wallet:me,message:msg,signature:b64(new Uint8Array(sig))})});
     const j=clean(await r.json().catch(()=>({})));
-    if(!r.ok){m.className="msg err";m.textContent=j.error==="not_holder"?"This wallet doesn't hold an Exposure coin yet. Buy any Exposure coin, then rate.":(j.error||"The rating didn't save. Try again in a minute.");return}
+    if(!r.ok){m.className="msg err";m.textContent=j.error==="not_holder"?"This wallet doesn't hold a Calls coin yet. Buy any Calls coin, then rate.":(j.error||"The rating didn't save. Try again in a minute.");return}
     const c=D.callers.find(x=>x.w===rateFor.w);if(c&&j.stars!=null){c.stars=j.stars;c.starsN=j.starsN}
     m.className="msg okm";m.textContent=`Saved. You gave @${rateFor.u} ${stars} star${stars>1?"s":""}.`;renderRanks();renderTopCallers();
     setTimeout(()=>{if(rateDlg.open)rateDlg.close()},1200);
@@ -242,14 +242,14 @@ function renderTopCallers(){
   <div class="who">${avatar(c.u,null,"lg")}<div><b>${uL(c.u,c.w)}</b><span class="mono">${esc(shortW(c.w))}</span></div><span class="rank">#${i+1}</span></div>
   <div><div class="eyebrow">Earned</div><div class="earned">${(+c.earned).toFixed(2)} SOL</div></div>
   <div class="mini"><span>${badge(r&&r.tier)}</span><span>Win rate <b>${r?Math.round(r.wr*100):0}%</b></span></div></div>`}).join("")
-  :`<div style="grid-column:1/-1">${empty("No callers have been paid yet. Hold an Exposure coin and post a callout to be the first.")}</div>`;
+  :`<div style="grid-column:1/-1">${empty("No callers have been paid yet. Hold a Calls coin and post a callout to be the first.")}</div>`;
 }
 
 // coins
 let coinSort="pool";
 function renderCoins(){
   const s=coinSort,list=[...D.coins].filter(c=>pairF==="all"||pairOf(c).kind===pairF).sort((a,b)=>s==="new"?b.createdAt-a.createdAt:s==="mc"?b.mc-a.mc:b.pool-a.pool);
-  if(!list.length&&D.coins.length){$id("coinGrid").innerHTML=`<div style="grid-column:1/-1">${empty("No coins with this pair yet.",`<a class="btn sm sig" href="#launch">Expose one <span class="arr" aria-hidden="true">→</span></a>`)}</div>`;return}
+  if(!list.length&&D.coins.length){$id("coinGrid").innerHTML=`<div style="grid-column:1/-1">${empty("No coins with this pair yet.",`<a class="btn sm sig" href="#launch">Launch one <span class="arr" aria-hidden="true">→</span></a>`)}</div>`;return}
   $id("coinGrid").innerHTML=list.length?list.map(c=>`<article class="card coin">
     <a class="coin-top coinLink" href="#coin-${encodeURIComponent(c.mint)}">${coinAv(c)}<div><b>${esc(c.n)}</b><span>$${esc(c.t)} <span class="pairTag">/ ${esc(pairOf(c).sym)}</span></span></div><span class="age">${age(c.createdAt)} ago</span></a>
     ${sparkline(c)}
@@ -257,7 +257,7 @@ function renderCoins(){
     <div class="coin-foot"><span>Mkt cap ${fmtMC(c.mc)}</span><span>${(+c.paid||0).toFixed(2)} SOL paid out so far</span></div>
     <div class="coin-actions"><a class="btn sm" href="https://pump.fun/coin/${encodeURIComponent(c.mint)}" target="_blank" rel="noopener">Buy on pump.fun</a><a class="btn sm ghost" href="#coin-${encodeURIComponent(c.mint)}">Open coin</a></div>
   </article>`).join("")
-  :`<div style="grid-column:1/-1">${empty("No coins launched yet. Be the first, and your coin's creator fees start paying its callers.",`<a class="btn sm sig" href="#launch">Expose a coin <span class="arr" aria-hidden="true">→</span></a>`)}</div>`;
+  :`<div style="grid-column:1/-1">${empty("No coins launched yet. Be the first, and your coin's creator fees start paying its callers.",`<a class="btn sm sig" href="#launch">Launch a coin <span class="arr" aria-hidden="true">→</span></a>`)}</div>`;
 }
 document.querySelectorAll("[data-sort]").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll("[data-sort]").forEach(x=>x.setAttribute("aria-pressed",x===b));coinSort=b.dataset.sort;renderCoins()}));
@@ -363,7 +363,7 @@ function renderBest(){
     <td class="num" style="color:var(--ok)">+${(+x.earned).toFixed(3)} SOL</td></tr>`}).join(""):emptyRow(7,list.length?"Positions 4 and down fill in as more callouts come in.":"The leaderboard fills in as soon as holders start posting callouts.");
   const today=bestCallouts("today");
   $id("bestToday").innerHTML=today.length?today.slice(0,5).map((x,i)=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay best"><span class="rk">#${i+1}</span>${avatar(x.u)}<div class="t"><b>${uL(x.u,x.w)} · $${esc(c.t)}</b><span>${callLine(x)}</span></div><div class="amt">+${(+x.earned).toFixed(3)} SOL<small>today</small></div></div>`}).join("")
-    :empty("No callouts today yet. Hold an Exposure coin, open its page and tap Call out.");
+    :empty("No callouts today yet. Hold a Calls coin, open its page and tap Call out.");
 }
 $id("bcPeriod").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b)return;bcP=b.dataset.p;document.querySelectorAll("#bcPeriod .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));renderBest()});
 $id("bcPlat").addEventListener("click",e=>{const b=e.target.closest("[data-pl]");if(!b)return;bcPl=b.dataset.pl;document.querySelectorAll("#bcPlat .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));renderBest()});
@@ -376,7 +376,7 @@ let fillRing=()=>{};
   const N=20,slabs=[];
   for(let i=0;i<N;i++){
     const el=document.createElement("div");el.className="slab";
-    el.innerHTML=`<div class="f front"></div><div class="f back"><span class="xp">Exposure</span><i class="sh"></i></div><div class="e et"></div><div class="e eb"></div><div class="e el"></div><div class="e er"></div>`;
+    el.innerHTML=`<div class="f front"></div><div class="f back"><span class="xp">Calls</span><i class="sh"></i></div><div class="e et"></div><div class="e eb"></div><div class="e el"></div><div class="e er"></div>`;
     ring.appendChild(el);el.dataset.i=i;slabs.push({el,front:el.querySelector(".front"),bs:el.querySelector(".back .sh"),a:i*360/N,h:0,lh:-1,lf:-1,lb:-1});
   }
   fillRing=function(){
@@ -451,12 +451,12 @@ let fillRing=()=>{};
     q.value="";close()});
 })();
 
-// $EXPO page
+// $CALLS page
 function renderXP(){
   const X=D.xp||{},live=!!CONFIG.xpMint,burns=X.burns||[];
   const bought=burns.reduce((a,b)=>a+(+b.sol||0),0),burned=burns.reduce((a,b)=>a+(+b.xp||0),0);
   const big=n=>n>=1e9?(n/1e9).toFixed(2)+"B":n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":Math.round(n).toLocaleString();
-  $id("xpStatus").innerHTML=live?`<span class="xpPill isLive"><i></i>Live</span><a class="btn sig" href="https://pump.fun/coin/${encodeURIComponent(CONFIG.xpMint)}" target="_blank" rel="noopener">Buy $EXPO on pump.fun <span class="arr" aria-hidden="true">→</span></a>`
+  $id("xpStatus").innerHTML=live?`<span class="xpPill isLive"><i></i>Live</span><a class="btn sig" href="https://pump.fun/coin/${encodeURIComponent(CONFIG.xpMint)}" target="_blank" rel="noopener">Buy $CALLS on pump.fun <span class="arr" aria-hidden="true">→</span></a>`
     :`<span class="xpPill"><i></i>Not launched yet</span><span class="xpSoon">Launches after the launchpad. Follow <a href="https://x.com/exposurefun" target="_blank" rel="noopener">@exposurefun</a> for the date.</span>`;
   $id("xpAddr").textContent=live?CONFIG.xpMint:"Posted here on launch day";
   $id("xpCaBtns").innerHTML=live?`<button class="btn sm ghost" type="button" id="xpCopy">Copy address</button><a class="btn sm ghost" href="https://solscan.io/token/${encodeURIComponent(CONFIG.xpMint)}" target="_blank" rel="noopener">Solscan ↗</a>`:"";
@@ -467,7 +467,7 @@ function renderXP(){
   $id("xpWhen").textContent=live?(X.launchedAt?new Date(X.launchedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"Live"):"After the launchpad";
   $id("xpResW").innerHTML=CONFIG.reserveWallet?`<a class="mono" href="https://solscan.io/account/${encodeURIComponent(CONFIG.reserveWallet)}" target="_blank" rel="noopener">${esc(shortW(CONFIG.reserveWallet))} ↗</a>`:"Shown at launch";
   $id("xpBurnRows").innerHTML=burns.length?burns.slice().reverse().map(b=>`<tr><td>${new Date(b.at).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</td><td class="num">${(+b.sol).toFixed(3)} SOL</td><td class="num burnTxt">${big(+b.xp)}</td><td class="num"><a class="mono" href="https://solscan.io/tx/${encodeURIComponent(b.tx)}" target="_blank" rel="noopener">${esc(shortW(b.tx))} ↗</a></td></tr>`).join("")
-    :emptyRow(4,live?"No burns yet. The first one happens with the next payout.":"Burns start the day $EXPO launches. The whole reserve goes into the first one.");
+    :emptyRow(4,live?"No burns yet. The first one happens with the next payout.":"Burns start the day $CALLS launches. The whole reserve goes into the first one.");
 }
 document.addEventListener("click",e=>{const b=e.target.closest("#xpCopy");if(!b)return;
   const done=()=>{b.textContent="Copied";setTimeout(()=>b.textContent="Copy address",1500)};
@@ -478,53 +478,53 @@ document.addEventListener("click",e=>{const b=e.target.closest("#xpCopy");if(!b)
 const SHARE_HANDLE="@exposurefun";
 function shareData(x){return encodeURIComponent(JSON.stringify({u:x.u||"",w:x.w||"",sol:+x.sol||0,coin:x.coin||"",pl:x.pl||"exposure",hold:+x.hold||0,pnl:+x.pnl||0,at:x.at||Date.now()}))}
 function shareBtn(x){return `<button class="shareBtn" type="button" data-share="${shareData(x)}" aria-label="Share this payout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>`}
-function drawMark(g,cx,cy,s){g.save();g.translate(cx,cy);const gr=g.createLinearGradient(-s,-s,s,s);gr.addColorStop(0,"#ffe7cf");gr.addColorStop(.5,"#d96a26");gr.addColorStop(1,"#6b2a0c");g.fillStyle=gr;
+function drawMark(g,cx,cy,s){g.save();g.translate(cx,cy);const gr=g.createLinearGradient(-s,-s,s,s);gr.addColorStop(0,"#e4eae8");gr.addColorStop(.5,"#26d97a");gr.addColorStop(1,"#0c6b38");g.fillStyle=gr;
   for(let k=0;k<9;k++){g.save();g.rotate(k*40*Math.PI/180);const w=s*.26,h=s*.57,r=w/2;g.beginPath();g.roundRect(-w/2,-s,w,h,r);g.fill();g.restore()}g.restore()}
 async function makeShareCard(x){
   try{await Promise.all([document.fonts.load('800 120px "Bricolage Grotesque"'),document.fonts.load('600 40px Geist'),document.fonts.load('500 30px "Geist Mono"')])}catch(e){}
   const W=1200,H=675,cv=document.createElement("canvas");cv.width=W*2;cv.height=H*2;const g=cv.getContext("2d");g.scale(2,2);
   const c=coinBy(x.coin)||{t:x.coin||"COIN"},p=pairOf(c);
-  let bg=g.createRadialGradient(880,300,40,880,300,760);bg.addColorStop(0,"#3e1f0d");bg.addColorStop(.45,"#1d0f08");bg.addColorStop(1,"#0e0806");g.fillStyle=bg;g.fillRect(0,0,W,H);
+  let bg=g.createRadialGradient(880,300,40,880,300,760);bg.addColorStop(0,"#212a28");bg.addColorStop(.45,"#101514");bg.addColorStop(1,"#090b0b");g.fillStyle=bg;g.fillRect(0,0,W,H);
   // copper coin on the right
-  const cx=930,cy=330,R=190;let rim=g.createLinearGradient(cx-R,cy-R,cx+R,cy+R);rim.addColorStop(0,"#ffe7cf");rim.addColorStop(.4,"#d96a26");rim.addColorStop(.7,"#6b2a0c");rim.addColorStop(1,"#ffa45c");
-  g.beginPath();g.arc(cx,cy,R,0,7);g.fillStyle=rim;g.shadowColor="rgba(255,140,60,.35)";g.shadowBlur=60;g.fill();g.shadowBlur=0;
-  let face=g.createRadialGradient(cx-60,cy-70,10,cx,cy,R);face.addColorStop(0,"#ffc08a");face.addColorStop(.45,"#d96a26");face.addColorStop(1,"#55210c");
+  const cx=930,cy=330,R=190;let rim=g.createLinearGradient(cx-R,cy-R,cx+R,cy+R);rim.addColorStop(0,"#e4eae8");rim.addColorStop(.4,"#26d97a");rim.addColorStop(.7,"#0c6b38");rim.addColorStop(1,"#5cffa8");
+  g.beginPath();g.arc(cx,cy,R,0,7);g.fillStyle=rim;g.shadowColor="rgba(60,255,151,.35)";g.shadowBlur=60;g.fill();g.shadowBlur=0;
+  let face=g.createRadialGradient(cx-60,cy-70,10,cx,cy,R);face.addColorStop(0,"#8affc1");face.addColorStop(.45,"#26d97a");face.addColorStop(1,"#0c552e");
   g.beginPath();g.arc(cx,cy,R-16,0,7);g.fillStyle=face;g.fill();
-  g.fillStyle="#351306";g.textAlign="center";g.textBaseline="middle";let tk="$"+c.t,fs=96;g.font=`800 ${fs}px "Bricolage Grotesque",sans-serif`;while(g.measureText(tk).width>R*1.55&&fs>30){fs-=4;g.font=`800 ${fs}px "Bricolage Grotesque",sans-serif`}
+  g.fillStyle="#1a211f";g.textAlign="center";g.textBaseline="middle";let tk="$"+c.t,fs=96;g.font=`800 ${fs}px "Bricolage Grotesque",sans-serif`;while(g.measureText(tk).width>R*1.55&&fs>30){fs-=4;g.font=`800 ${fs}px "Bricolage Grotesque",sans-serif`}
   g.fillText(tk,cx,cy+4);
   g.textAlign="left";g.textBaseline="alphabetic";
   // brand
-  drawMark(g,84,82,22);g.fillStyle="#f7ece3";g.font='700 34px "Bricolage Grotesque",sans-serif';g.fillText("Exposure",118,94);
+  drawMark(g,84,82,22);g.fillStyle="#ebefee";g.font='700 34px "Bricolage Grotesque",sans-serif';g.fillText("Calls",118,94);
   // copy
-  g.fillStyle="#ff9a4d";g.font='500 22px "Geist Mono",monospace';g.fillText("PAID FOR A CALLOUT",72,214);
-  g.fillStyle="#f7ece3";g.font='600 40px Geist,sans-serif';let who="@"+(x.u||shortW(x.w)||"caller");while(g.measureText(who).width>560)who=who.slice(0,-2);g.fillText(who,72,272);
+  g.fillStyle="#4dffa0";g.font='500 22px "Geist Mono",monospace';g.fillText("PAID FOR A CALLOUT",72,214);
+  g.fillStyle="#ebefee";g.font='600 40px Geist,sans-serif';let who="@"+(x.u||shortW(x.w)||"caller");while(g.measureText(who).width>560)who=who.slice(0,-2);g.fillText(who,72,272);
   const amt="+"+(+x.sol).toFixed(3)+" SOL";let af=118;g.font=`800 ${af}px "Bricolage Grotesque",sans-serif`;while(g.measureText(amt).width>600&&af>60){af-=4;g.font=`800 ${af}px "Bricolage Grotesque",sans-serif`}
-  let tg=g.createLinearGradient(72,300,640,400);tg.addColorStop(0,"#ffe7cf");tg.addColorStop(.4,"#ffa45c");tg.addColorStop(1,"#d96a26");g.fillStyle=tg;g.fillText(amt,68,392);
-  g.fillStyle="#b09a8c";g.font='500 30px Geist,sans-serif';g.fillText(`for calling $${c.t}${p.sym!=="SOL"?" / "+p.sym:""} on Exposure`,72,446);
+  let tg=g.createLinearGradient(72,300,640,400);tg.addColorStop(0,"#e4eae8");tg.addColorStop(.4,"#5cffa8");tg.addColorStop(1,"#26d97a");g.fillStyle=tg;g.fillText(amt,68,392);
+  g.fillStyle="#94a8a3";g.font='500 30px Geist,sans-serif';g.fillText(`for calling $${c.t}${p.sym!=="SOL"?" / "+p.sym:""} on Calls`,72,446);
   // chips
-  const chip=(t,x0)=>{g.font='500 22px "Geist Mono",monospace';const w=g.measureText(t).width+36;g.strokeStyle="rgba(255,164,92,.4)";g.lineWidth=1.5;g.beginPath();g.roundRect(x0,500,w,46,23);g.stroke();g.fillStyle="#f7ece3";g.fillText(t,x0+18,531);return x0+w+12};
+  const chip=(t,x0)=>{g.font='500 22px "Geist Mono",monospace';const w=g.measureText(t).width+36;g.strokeStyle="rgba(92,255,168,.4)";g.lineWidth=1.5;g.beginPath();g.roundRect(x0,500,w,46,23);g.stroke();g.fillStyle="#ebefee";g.fillText(t,x0+18,531);return x0+w+12};
   let cx0=72;cx0=chip(callLine(x),cx0);chip(new Date(x.at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),cx0);
   // footer
-  g.fillStyle="rgba(255,164,92,.25)";g.fillRect(0,H-64,W,1);g.fillStyle="#b09a8c";g.font='500 22px "Geist Mono",monospace';g.fillText("Hold it. Call it. Get paid.",72,H-24);
-  g.textAlign="right";g.fillStyle="#f7ece3";g.fillText(SHARE_HANDLE,W-72,H-24);
+  g.fillStyle="rgba(92,255,168,.25)";g.fillRect(0,H-64,W,1);g.fillStyle="#94a8a3";g.font='500 22px "Geist Mono",monospace';g.fillText("Hold it. Call it. Get paid.",72,H-24);
+  g.textAlign="right";g.fillStyle="#ebefee";g.fillText(SHARE_HANDLE,W-72,H-24);
   return cv.toDataURL("image/png");
 }
 const shareDlg=$id("shareDlg");let shareText="";
 async function openShare(x){
   const c=coinBy(x.coin)||{t:x.coin},mine=ME&&x.w===ME;
-  shareText=mine?`Just got paid ${(+x.sol).toFixed(3)} SOL for calling $${c.t} on Exposure 🔥\n\nHold a coin, call it out, get paid from its creator fees.`
-    :`@${x.u} just got paid ${(+x.sol).toFixed(3)} SOL for calling $${c.t} on Exposure 🔥\n\nHold a coin, call it out, get paid from its creator fees.`;
+  shareText=mine?`Just got paid ${(+x.sol).toFixed(3)} SOL for calling $${c.t} on Calls 🔥\n\nHold a coin, call it out, get paid from its creator fees.`
+    :`@${x.u} just got paid ${(+x.sol).toFixed(3)} SOL for calling $${c.t} on Calls 🔥\n\nHold a coin, call it out, get paid from its creator fees.`;
   $id("shareImg").removeAttribute("src");$id("shareCopy").textContent="Copy text";
   $id("shareX2").href="https://x.com/intent/post?text="+encodeURIComponent(shareText);
   if(shareDlg.showModal)shareDlg.showModal();else shareDlg.setAttribute("open","");
-  const url=await makeShareCard(x);$id("shareImg").src=url;$id("shareDl").href=url;$id("shareDl").download=`exposure-${c.t}-payout.png`;
+  const url=await makeShareCard(x);$id("shareImg").src=url;$id("shareDl").href=url;$id("shareDl").download=`calls-${c.t}-payout.png`;
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-share]");if(!b)return;e.preventDefault();try{openShare(JSON.parse(decodeURIComponent(b.dataset.share)))}catch(x){}});
 $id("shareX").addEventListener("click",()=>shareDlg.close());
 shareDlg.addEventListener("click",e=>{if(e.target===shareDlg)shareDlg.close()});
 $id("shareCopy").addEventListener("click",()=>{const b=$id("shareCopy");try{navigator.clipboard.writeText(shareText).then(()=>{b.textContent="Copied"},()=>{b.textContent="Copy failed"})}catch(x){b.textContent="Copy failed"}});
 
-// ===== wallet connect + My Exposure =====
+// ===== wallet connect + My Calls =====
 let ME=null,MEDATA=null,meMsg="";
 try{ME=localStorage.getItem("exposure-wallet")||null}catch(e){}
 const isAddr=v=>/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v||"");
@@ -549,7 +549,7 @@ $id("walletBtn").addEventListener("click",()=>{if(ME)go("me");else connectWallet
 function renderMe(){
   const el=$id("mePage");if(!el)return;
   if(!ME){el.innerHTML=`<div class="meEmpty card">
-    <div class="eyebrow">My Exposure</div><h1>Your earnings, callouts and rank in one place</h1>
+    <div class="eyebrow">My Calls</div><h1>Your earnings, callouts and rank in one place</h1>
     <p>Connect your wallet to see what you've earned, which callouts are in this round, your caller rank and every payout you've had. Connecting only shares your public address. It can't move funds.</p>
     <div class="meCta"><button class="btn sig" type="button" id="meConnect">Connect wallet</button>${DEMO_ON?`<button class="btn ghost" type="button" id="meDemo">Try with a demo wallet</button>`:""}</div>
     ${meMsg?`<p class="msg err">${esc(meMsg)}</p>`:""}
@@ -562,10 +562,10 @@ function renderMe(){
   const pos=r&&r.tier?ranked.indexOf(r)+1:0,t20i=D.top20.findIndex(x=>x.w===ME)+1,xo=xOf(ME);
   const st=r?nextStep(r):null;
   el.innerHTML=`<div class="meHead">
-      <div class="meWho">${xo?`<div class="bigPfp"><img src="${esc(xo.avatar)}" alt="" referrerpolicy="no-referrer">${emblem(r&&r.tier,30)}</div>`:emblem(r&&r.tier,64)}<div><div class="eyebrow">My Exposure</div><h1>${esc(xo?xo.name:name)}</h1>${xo?`<div class="upSub"><span class="mono">${esc(name)}</span> on Exposure · ${xLinkBadge(xo)}</div>`:""}<div class="meTags">${badge(r&&r.tier)}${t20i?`<span class="pill t20">Top 20 · #${t20i}</span>`:""}${r?starLine(r):""}</div></div></div>
+      <div class="meWho">${xo?`<div class="bigPfp"><img src="${esc(xo.avatar)}" alt="" referrerpolicy="no-referrer">${emblem(r&&r.tier,30)}</div>`:emblem(r&&r.tier,64)}<div><div class="eyebrow">My Calls</div><h1>${esc(xo?xo.name:name)}</h1>${xo?`<div class="upSub"><span class="mono">${esc(name)}</span> on Calls · ${xLinkBadge(xo)}</div>`:""}<div class="meTags">${badge(r&&r.tier)}${t20i?`<span class="pill t20">Top 20 · #${t20i}</span>`:""}${r?starLine(r):""}</div></div></div>
       <div class="meActs">${!CONFIG.xLink?"":xo?`<button class="btn sm ghost" type="button" id="meUnlinkX">Unlink X</button>`:`<button class="btn sm xBtn" type="button" id="meLinkX">${X_ICON}Link X account</button>`}<a class="btn sm ghost" href="#u-${encodeURIComponent(ME)}">Public profile</a><button class="btn sm ghost" type="button" id="meCopy">Copy address</button><a class="btn sm ghost" href="https://solscan.io/account/${encodeURIComponent(ME)}" target="_blank" rel="noopener">Solscan ↗</a><button class="btn sm ghost" type="button" id="meOut">Disconnect</button></div>
     </div>
-    ${CONFIG.xLink&&!xo?`<div class="card xPromo">${X_ICON}<div><b>Link your X account</b><p>Show your X name and profile picture next to your Exposure username on your profile, the rankings and every payout.</p></div><button class="btn sm sig" type="button" id="meLinkX2">Link X</button></div>`:""}<p class="msg" id="meXMsg" role="status"></p>
+    ${CONFIG.xLink&&!xo?`<div class="card xPromo">${X_ICON}<div><b>Link your X account</b><p>Show your X name and profile picture next to your Calls username on your profile, the rankings and every payout.</p></div><button class="btn sm sig" type="button" id="meLinkX2">Link X</button></div>`:""}<p class="msg" id="meXMsg" role="status"></p>
     <div class="statbar meStatbar" role="group" aria-label="Your totals">
       <div><small>Earned, all time</small><b class="up">${earned.toFixed(3)} SOL</b></div>
       <div><small>Estimated, today</small><b>${est.toFixed(3)} SOL</b></div>
@@ -575,11 +575,11 @@ function renderMe(){
     ${st?`<div class="card meNext"><div class="rkProg"><div class="bar"><i style="width:${Math.round(st.pct*100)}%"></i></div><p>${esc(st.txt)}</p></div></div>`:""}
     <div class="two">
       <div><div class="sec-head"><div><h2>Your callouts</h2><p>Callouts in open rounds, with your estimated share.</p></div></div>
-        <div class="list">${m.callouts.length?m.callouts.slice(0,12).map(x=>{const c=coinBy(x.coin)||{t:x.coin,mint:x.coin};return `<a class="pay rowLink" href="#coin-${encodeURIComponent(c.mint||x.coin)}">${coinAv(c,"sq")}<div class="t"><b>$${esc(c.t)}</b><span>${callLine(x)}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>estimated</small></div></a>`}).join(""):empty("No callouts yet. Hold an Exposure coin, open its page and tap Call out.",`<a class="btn sm" href="#explore">Find a coin</a>`)}</div></div>
+        <div class="list">${m.callouts.length?m.callouts.slice(0,12).map(x=>{const c=coinBy(x.coin)||{t:x.coin,mint:x.coin};return `<a class="pay rowLink" href="#coin-${encodeURIComponent(c.mint||x.coin)}">${coinAv(c,"sq")}<div class="t"><b>$${esc(c.t)}</b><span>${callLine(x)}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>estimated</small></div></a>`}).join(""):empty("No callouts yet. Hold a Calls coin, open its page and tap Call out.",`<a class="btn sm" href="#explore">Find a coin</a>`)}</div></div>
       <div><div class="sec-head"><div><h2>Your payouts</h2><p>Every payout sent to this wallet.</p></div></div>
         <div class="list">${m.payouts.length?m.payouts.map(payRow).join(""):empty("No payouts yet. You'll see each one here with its transaction, and a button to share it.")}</div></div>
     </div>
-    <div><div class="sec-head"><div><h2>Coins you launched</h2><p>Coins created from this wallet on Exposure.</p></div></div>
+    <div><div class="sec-head"><div><h2>Coins you launched</h2><p>Coins created from this wallet on Calls.</p></div></div>
       <div class="grid g3">${m.coins.length?m.coins.map(c=>`<a class="card coin coinMini" href="#coin-${encodeURIComponent(c.mint)}"><div class="coin-top">${coinAv(c)}<div><b>${esc(c.n)}</b><span>$${esc(c.t)} <span class="pairTag">/ ${esc(pairOf(c).sym)}</span></span></div></div><div class="kv"><div><small>In pool</small><b class="pool">${(+c.pool).toFixed(2)} SOL</b></div><div><small>Paid out</small><b>${(+c.paid||0).toFixed(2)} SOL</b></div><div><small>Callouts</small><b>${c.calls|0}</b></div></div></a>`).join("")
         :`<div style="grid-column:1/-1">${empty("You haven't launched a coin yet.",`<a class="btn sm sig" href="#launch">Launch a coin <span class="arr" aria-hidden="true">→</span></a>`)}</div>`}</div></div>`;
 }
@@ -590,7 +590,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("submit",e=>{if(e.target.id!=="meLook")return;e.preventDefault();const v=$id("meAddr").value.trim(),m=$id("meLookMsg");
   if(!isAddr(v)){m.className="msg err";m.textContent="We couldn't read that Solana address. Paste the full address.";return}setMe(v)});
-// ===== callouts: signed on Exposure =====
+// ===== callouts: signed on Calls =====
 document.addEventListener("click",e=>{const j=e.target.closest("[data-jump]");if(!j)return;e.preventDefault();const el=$id(j.dataset.jump);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});const i=el.querySelector("input");i&&setTimeout(()=>i.focus({preventScroll:true}),400)}});
 document.addEventListener("submit",async e=>{const f=e.target.closest("#callForm");if(!f)return;e.preventDefault();
   const m=$id("callMsg"),btn=$id("callGo"),mint=f.dataset.mint,t=f.dataset.t,note=($id("callNote").value||"").replace(/[\r\n]+/g," ").trim().slice(0,140);
@@ -600,7 +600,7 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("#callForm
   btn.disabled=true;
   try{m.className="msg";m.textContent="Approve in your wallet. It's a free signature, nothing is sent.";
     const c=await prov.connect();const me=String((c&&c.publicKey)||prov.publicKey);if(me!==ME)setMe(me);
-    const msg=["Exposure callout","Coin: "+mint].concat(note?["Note: "+note]:[]).concat(["Wallet: "+me,"Time: "+new Date().toISOString()]).join("\n");
+    const msg=["Calls callout","Coin: "+mint].concat(note?["Note: "+note]:[]).concat(["Wallet: "+me,"Time: "+new Date().toISOString()]).join("\n");
     const s=await prov.signMessage(new TextEncoder().encode(msg),"utf8");const sig=s&&s.signature?s.signature:s;
     m.textContent="Posting your callout…";
     const r=await fetch(CONFIG.api.replace(/\/$/,"")+"/callout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mint,wallet:me,message:msg,signature:b64(new Uint8Array(sig))})});
@@ -626,7 +626,7 @@ async function linkX(){
   if(!CONFIG.api){$id("xHandle").value="";$id("xName").value="";$id("xMsg").textContent="";if(xDlg.showModal)xDlg.showModal();else xDlg.setAttribute("open","");setTimeout(()=>$id("xHandle").focus(),30);return}
   const prov=walletProvider(),m=$id("meXMsg");
   if(!prov||!walletConnected()){if(m){m.className="msg err";m.textContent="Connect this wallet first. Linking X needs a signature from it."}return}
-  try{const msg=`Link an X account to Exposure\nWallet: ${ME}\nTime: ${new Date().toISOString()}`;
+  try{const msg=`Link an X account to Calls\nWallet: ${ME}\nTime: ${new Date().toISOString()}`;
     const s=await prov.signMessage(new TextEncoder().encode(msg),"utf8");const sig=s&&s.signature?s.signature:s;
     const r=await fetch(CONFIG.api.replace(/\/$/,"")+"/x/link",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({wallet:ME,message:msg,signature:b64(new Uint8Array(sig)),returnTo:location.href.split("#")[0]+"#me"})});
     const j=await r.json();const go2=r.ok&&j&&safeRedirect(j.url,["x.com","twitter.com"]);if(!go2)throw 0;location.href=go2;
@@ -636,7 +636,7 @@ async function unlinkX(){
   if(!ME)return;
   if(!CONFIG.api){const c=D.callers.find(k=>k.w===ME);if(c)delete c.x;if(D.xLinks)delete D.xLinks[ME];rebuildX();renderAll();return}
   const prov=walletProvider(),m=$id("meXMsg");
-  try{const msg=`Unlink X from Exposure\nWallet: ${ME}\nTime: ${new Date().toISOString()}`;const s=await prov.signMessage(new TextEncoder().encode(msg),"utf8");const sig=s&&s.signature?s.signature:s;
+  try{const msg=`Unlink X from Calls\nWallet: ${ME}\nTime: ${new Date().toISOString()}`;const s=await prov.signMessage(new TextEncoder().encode(msg),"utf8");const sig=s&&s.signature?s.signature:s;
     const r=await fetch(CONFIG.api.replace(/\/$/,"")+"/x/unlink",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({wallet:ME,message:msg,signature:b64(new Uint8Array(sig))})});if(!r.ok)throw 0;
     MEDATA=null;await loadState();loadMe();
   }catch(err){if(m){m.className="msg err";m.textContent="We couldn't unlink X. Try again in a minute."}}
@@ -658,16 +658,16 @@ function renderUserPage(){
   const k=userKey,d=USERDATA[k]||{},base=d.caller||findCaller(k);
   const w=(base&&base.w)||k,u=(base&&base.u)||(D.payouts.find(x=>x.w===w)||D.callouts.find(x=>x.w===w)||{}).u;
   const callouts=d.callouts||D.callouts.filter(x=>x.w===w),payouts=d.payouts||D.payouts.filter(x=>x.w===w),coins=d.coins||D.coins.filter(c=>c.creator===w);
-  if(!base&&!u&&!callouts.length&&!payouts.length){el.innerHTML=empty(D.callers.length?"We couldn't find that caller on Exposure.":"Caller profiles fill in once people start posting callouts.",`<a class="btn sm" href="#ranks">See caller ranks</a>`);loadUser(k);return}
+  if(!base&&!u&&!callouts.length&&!payouts.length){el.innerHTML=empty(D.callers.length?"We couldn't find that caller on Calls.":"Caller profiles fill in once people start posting callouts.",`<a class="btn sm" href="#ranks">See caller ranks</a>`);loadUser(k);return}
   const ranks30=callerRanks("30"),rAll=callerRanks("all"),r=ranks30.find(c=>c.w===w),ra=rAll.find(c=>c.w===w);
   const ranked=ranks30.filter(c=>c.tier),pos=r&&r.tier?ranked.indexOf(r)+1:0,t20=D.top20.findIndex(x=>x.w===w)+1;
   const earned=base?(+base.earned||0):payouts.reduce((a,p)=>a+(+p.sol||0),0);
   const name=u?"@"+u:shortW(w),isMe=ME&&ME===w,st=r?nextStep(r):null,xo=xOf(w);
   const stat=(l,v,cls="")=>`<div><small>${l}</small><b class="${cls}">${v}</b></div>`;
   el.innerHTML=`<div class="meHead">
-      <div class="meWho">${xo?`<div class="bigPfp"><img src="${esc(xo.avatar)}" alt="" referrerpolicy="no-referrer">${emblem(r&&r.tier,30)}</div>`:emblem(r&&r.tier,72)}<div><div class="eyebrow">Caller profile${isMe?" · this is you":""}</div><h1>${esc(xo?xo.name:name)}</h1>${xo?`<div class="upSub"><span class="mono">${esc(name)}</span> on Exposure · ${xLinkBadge(xo)}</div>`:""}
+      <div class="meWho">${xo?`<div class="bigPfp"><img src="${esc(xo.avatar)}" alt="" referrerpolicy="no-referrer">${emblem(r&&r.tier,30)}</div>`:emblem(r&&r.tier,72)}<div><div class="eyebrow">Caller profile${isMe?" · this is you":""}</div><h1>${esc(xo?xo.name:name)}</h1>${xo?`<div class="upSub"><span class="mono">${esc(name)}</span> on Calls · ${xLinkBadge(xo)}</div>`:""}
         <div class="meTags">${badge(r&&r.tier)}${pos?`<span class="pill rkPill">#${pos} ranked</span>`:""}${t20?`<span class="pill t20">Top 20 · #${t20}</span>`:""}${r&&r.streak>=3?`<span class="hot">🔥 ${r.streak} wins in a row</span>`:""}</div></div></div>
-      <div class="meActs">${r&&r.tier&&!isMe?`<button class="btn sm sig" type="button" data-rate="${esc(w)}">Rate @${esc(u||"")}</button>`:""}${isMe?`<a class="btn sm" href="#me">Open My Exposure</a>`:""}<button class="btn sm ghost" type="button" data-copy="${esc(w)}">Copy wallet</button><a class="btn sm ghost" href="https://solscan.io/account/${encodeURIComponent(w)}" target="_blank" rel="noopener">Solscan ↗</a></div>
+      <div class="meActs">${r&&r.tier&&!isMe?`<button class="btn sm sig" type="button" data-rate="${esc(w)}">Rate @${esc(u||"")}</button>`:""}${isMe?`<a class="btn sm" href="#me">Open My Calls</a>`:""}<button class="btn sm ghost" type="button" data-copy="${esc(w)}">Copy wallet</button><a class="btn sm ghost" href="https://solscan.io/account/${encodeURIComponent(w)}" target="_blank" rel="noopener">Solscan ↗</a></div>
     </div>
     <div class="upRate card">
       <div class="upStars">${r?starLine(r,true):starLine({starsN:0},true)}<span>${r&&r.starsN>=3?`from ${r.starsN} holder ratings`:"Needs 3 ratings to show stars"}</span></div>
@@ -748,11 +748,11 @@ addEventListener("resize",()=>{if(window.CUR_VIEW==="coin")drawCoinChart(coinBy(
 let coinKey=null;
 function renderCoinPage(){
   const el=$id("coinPage");if(!el)return;const c=coinKey&&coinBy(coinKey);
-  if(!c){el.innerHTML=empty(D.coins.length?"We couldn't find that coin on Exposure.":"Coin pages fill in once coins launch on Exposure.",`<a class="btn sm" href="#explore">Back to Explore</a>`);return}
+  if(!c){el.innerHTML=empty(D.coins.length?"We couldn't find that coin on Calls.":"Coin pages fill in once coins launch on Calls.",`<a class="btn sm" href="#explore">Back to Explore</a>`);return}
   const p=pairOf(c),pct=Math.max(0,Math.min(100,(+c.pool||0)/THRESH*100)),rows=score((D.round[c.mint]||[]).map(r=>({...r})),THRESH),max=rows[0]?.sc||1;
   const pays=D.payouts.filter(x=>x.coin===c.mint||x.coin===c.t),fee=c.fee!=null?+c.fee:(p.sym==="SOL"?0.3:null);
   const pageUrl=location.href.split("#")[0]+"#coin-"+encodeURIComponent(c.mint);
-  const xText=`$${c.t} is on Exposure. Holders who call it out get paid from its creator fees.\n\n`;
+  const xText=`$${c.t} is on Calls. Holders who call it out get paid from its creator fees.\n\n`;
   // keep what someone is typing (and the last message) when the page refreshes its data
   const keep=(()=>{const n=$id("callNote"),m=$id("callMsg"),f=$id("callForm");return f&&f.dataset.mint===c.mint?{v:n?n.value:"",focus:document.activeElement===n,msg:m?m.textContent:"",cls:m?m.className:"msg"}:null})();
   el.innerHTML=`<div class="cpHead">
@@ -767,7 +767,7 @@ function renderCoinPage(){
     <div class="card cpPool">
       <div class="cpPoolTop"><div><div class="eyebrow">Callout pool</div><b class="cpPoolAmt">${(+c.pool).toFixed(3)} <small>/ ${THRESH} SOL</small></b></div><span class="cpPoolPct mono">${Math.round(pct)}% to next payout</span></div>
       <div class="cpBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}" aria-label="Pool progress to 1 SOL"><i style="width:${pct}%"></i></div>
-      <p>When the pool is worth 1 SOL it pays out: <b>${(THRESH*.7).toFixed(2)} SOL</b> to this round's callers, <b>${(THRESH*.05).toFixed(2)}</b> to the Top 20 and <b>${(THRESH*.25).toFixed(2)}</b> to the $EXPO reserve.${p.sym!=="SOL"?` Callers are paid in ${esc(p.sym)}.`:""}</p>
+      <p>When the pool is worth 1 SOL it pays out: <b>${(THRESH*.7).toFixed(2)} SOL</b> to this round's callers, <b>${(THRESH*.05).toFixed(2)}</b> to the Top 20 and <b>${(THRESH*.25).toFixed(2)}</b> to the $CALLS reserve.${p.sym!=="SOL"?` Callers are paid in ${esc(p.sym)}.`:""}</p>
     </div>
     <div class="statbar cpStats" role="group" aria-label="Coin stats">
       <div><small>Market cap</small><b>${fmtMC(c.mc)}</b></div>
@@ -801,16 +801,16 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if
 function renderProof(){
   const W=[["Fee and payout wallet",CONFIG.botWallet,"Claims each coin's creator fees from pump.fun and sends payouts. It only holds what's waiting to be paid."],
     ["Top 20 bonus wallet",D.top20Wallet||CONFIG.top20Wallet,"Collects 5% of every payout and pays the Top 20 callers by rank once a day."],
-    ["$EXPO buyback reserve",CONFIG.reserveWallet,"Collects 25% of every payout. It's only ever used to buy $EXPO and burn it."],
-    ["$EXPO token",CONFIG.xpMint,"The $EXPO contract address."]];
+    ["$CALLS buyback reserve",CONFIG.reserveWallet,"Collects 25% of every payout. It's only ever used to buy $CALLS and burn it."],
+    ["$CALLS token",CONFIG.xpMint,"The $CALLS contract address."]];
   $id("pfWallets").innerHTML=W.map(([n,a,d])=>`<div class="pfW"><div><b>${n}</b><p>${d}</p></div>${a?`<div class="pfA"><span class="mono">${esc(shortW(a))}</span><button class="btn sm ghost" type="button" data-copy="${esc(a)}">Copy</button><a class="btn sm ghost" href="https://solscan.io/${n.includes("token")?"token":"account"}/${encodeURIComponent(a)}" target="_blank" rel="noopener">Solscan ↗</a></div>`:`<span class="pfSoon mono">Published at launch</span>`}</div>`).join("");
   const T=D.totals||{},paid=D.payouts.reduce((a,p)=>a+(+p.sol||0),0);
   $id("pfClaimed").textContent=(+T.claimed||0).toFixed(2)+" SOL";
   $id("pfCallers").textContent=(T.callers!=null?+T.callers:paid).toFixed(2)+" SOL";
   $id("pfTop").textContent=(+T.top20||0).toFixed(2)+" SOL";
   $id("pfRes").textContent=(T.reserve!=null?+T.reserve:(+D.reserve.balance||0)).toFixed(2)+" SOL";
-  const K={claim:"Fee claim",payout:"Caller payout",top20:"Top 20 payout",reserve:"To reserve",burn:"$EXPO burn"},A=D.activity||[];
-  $id("pfActivity").innerHTML=A.length?A.slice(0,25).map(a=>{const c=coinBy(a.coin);return `<div class="pay"><span class="actK ${a.kind}">${K[a.kind]||a.kind}</span><div class="t"><b>${c?"$"+esc(c.t):"Exposure"}</b><span>${ago(a.at)}</span></div><div class="amt">${(+a.sol).toFixed(3)} SOL</div><a class="tx" href="https://solscan.io/tx/${encodeURIComponent(a.tx)}" target="_blank" rel="noopener">${esc(shortW(a.tx))} ↗</a></div>`}).join("")
+  const K={claim:"Fee claim",payout:"Caller payout",top20:"Top 20 payout",reserve:"To reserve",burn:"$CALLS burn"},A=D.activity||[];
+  $id("pfActivity").innerHTML=A.length?A.slice(0,25).map(a=>{const c=coinBy(a.coin);return `<div class="pay"><span class="actK ${a.kind}">${K[a.kind]||a.kind}</span><div class="t"><b>${c?"$"+esc(c.t):"Calls"}</b><span>${ago(a.at)}</span></div><div class="amt">${(+a.sol).toFixed(3)} SOL</div><a class="tx" href="https://solscan.io/tx/${encodeURIComponent(a.tx)}" target="_blank" rel="noopener">${esc(shortW(a.tx))} ↗</a></div>`}).join("")
     :empty("Nothing yet. Every fee claim, payout and burn will show here with its transaction.");
 }
 
@@ -858,7 +858,7 @@ function buildDemo(){
   const rk=k=>{const v=top20.map(x=>x[k]).sort((a,b)=>a-b);top20.forEach(x=>x["r_"+k]=v.indexOf(x[k])/(v.length-1))};["gain","likes","entered"].forEach(rk);
   top20.forEach(x=>x.s=.45*x.r_gain+.4*x.r_likes+.15*x.r_entered);
   const T20=top20.sort((a,b)=>b.s-a.s).slice(0,20).map(x=>({u:x.p.u,w:x.p.w,tick:x.tick||pick(coins).t,gain:x.gain,likes:x.likes,entered:x.entered}));
-  // callouts are made on Exposure: each entry gets a holding (% of supply) and PnL (%) instead of likes
+  // callouts are made on Calls: each entry gets a holding (% of supply) and PnL (%) instead of likes
   const dScore=x=>Math.sqrt(Math.min(1,x.hold))*(1+Math.max(0,Math.min(400,x.pnl))/100);
   Object.values(round).forEach(rd=>rd.forEach(x=>{x.pl="exposure";x.hold=+(.02+r()*r()*.9).toFixed(3);x.pnl=Math.round((r()-.25)*240);x.wt=dScore(x);delete x.likes;delete x.hl}));
   callouts.length=0;coins.forEach(c=>score(round[c.mint].map(x=>({...x})),THRESH).forEach(x=>callouts.push({u:x.u,w:x.w,coin:c.mint,pl:"exposure",n:1,hold:x.hold,pnl:x.pnl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at})));
@@ -900,7 +900,7 @@ function demoTick(){
   demoRender();
 }
 function startDemo(){if(CONFIG.api)return;DEMO_ON=true;D={...D,...buildDemo()};
-  // make a few demo callers creators/holders so My Exposure has content
+  // make a few demo callers creators/holders so My Calls has content
   const best=callerRanks("30").find(c=>c.tier)||D.callers[0];DEMO_ME=best.w;D.coins[0].creator=DEMO_ME;D.coins[0].creatorU=best.u;
   [D.coins[0],D.coins[2]].forEach(c=>{if(!D.round[c.mint].some(x=>x.w===DEMO_ME)){D.round[c.mint].push({u:best.u,w:DEMO_ME,pl:"exposure",n:1,hold:.42,pnl:85,wt:Math.sqrt(.42)*1.85,at:Date.now()-2e6});c.calls+=1}});
   D.callouts=[];D.coins.forEach(c=>score(D.round[c.mint].map(x=>({...x})),THRESH).forEach(x=>D.callouts.push({u:x.u,w:x.w,coin:c.mint,pl:x.pl,n:x.n,hold:x.hold,pnl:x.pnl,sc:x.sc,earned:Math.min(x.raw,CAP),at:x.at})));
@@ -940,7 +940,8 @@ if(CONFIG.demo&&!CONFIG.api)startDemo();else syncDemoUI();
   const el=document.getElementById("intro"),v=document.getElementById("introVid"),vb=null;if(!el||!v)return;
   // play the intro on a first visit, then at most once every 12 hours; "Replay intro" in the footer always works
   let seenAt=0;try{seenAt=+localStorage.getItem("exposure-intro-at")||0}catch(e){}
-  const skipIntro=Date.now()-seenAt<12*36e5;
+  const INTRO_ON=false; // the old intro clip had the old name baked in; set true when a new clip is added
+  const skipIntro=!INTRO_ON||Date.now()-seenAt<12*36e5;
   let done=false,guard;
   function finish(){if(done)return;done=true;clearTimeout(guard);try{localStorage.setItem("exposure-intro-at",String(Date.now()))}catch(e){}el.classList.add("out");setTimeout(()=>{el.hidden=true;try{v.pause();vb&&vb.pause()}catch(e){}},650)}
   function start(){done=false;el.hidden=false;el.classList.remove("out");
@@ -953,7 +954,7 @@ if(CONFIG.demo&&!CONFIG.api)startDemo();else syncDemoUI();
   const tap=document.getElementById("introTap");
   tap.addEventListener("click",()=>{tap.hidden=true;v.muted=true;const q=v.play();if(q&&q.catch)q.catch(()=>finish());clearTimeout(guard);guard=setTimeout(finish,9000)});
   v.addEventListener("playing",()=>{tap.hidden=true;clearTimeout(guard);guard=setTimeout(finish,9000)});
-  v.addEventListener("ended",finish);v.addEventListener("error",finish);const srcs=v.querySelectorAll("source");srcs[srcs.length-1].addEventListener("error",finish);
+  v.addEventListener("ended",finish);v.addEventListener("error",finish);const srcs=v.querySelectorAll("source");if(srcs.length)srcs[srcs.length-1].addEventListener("error",finish);
   document.getElementById("introSkip").addEventListener("click",finish);
   addEventListener("keydown",e=>{if(e.key==="Escape")finish()});
   window.replayIntro=start;
@@ -1033,7 +1034,7 @@ function walletConnected(){const p=walletProvider();return !!(ME&&p&&p.publicKey
 function lfSetStep(n){document.querySelectorAll("#lfSteps li").forEach((li,i)=>{li.classList.toggle("done",i<n-1);li.classList.toggle("on",i===n-1)})}
 function lfWalletUI(){const el=$id("lfWallet");if(!el)return;const buy=+($id("lBuy").value||0),unit=$id("buyUnit")?$id("buyUnit").textContent:"SOL";
   el.innerHTML=walletConnected()?`<i class="wDot"></i><span>Launching from <b class="mono">${esc(shortW(ME))}</b>${buy>0?` · dev buy ${buy} ${esc(unit)}`:""}</span>`
-    :`<span>Your own wallet signs the launch${buy>0?" and pays the dev buy":""}. Exposure never holds your funds.</span><button type="button" class="btn sm" id="lfConnect">Connect wallet</button>`}
+    :`<span>Your own wallet signs the launch${buy>0?" and pays the dev buy":""}. Calls never holds your funds.</span><button type="button" class="btn sm" id="lfConnect">Connect wallet</button>`}
 document.addEventListener("click",async e=>{if(!e.target.closest("#lfConnect"))return;const m=$id("lMsg"),prov=await waitForWallet();
   if(!prov){if(openInWalletApp())return;m.className="msg err";m.textContent="No Solana wallet found in this browser. Install Phantom (phantom.app) and refresh.";return}
   try{const r=await prov.connect();const a=String((r&&r.publicKey)||prov.publicKey);setMe(a);lfWalletUI();m.textContent="";m.className="msg"}
@@ -1047,7 +1048,7 @@ document.getElementById("lf").addEventListener("submit",async e=>{
   if(!$id("lImg").files[0]){m.textContent="Add an image. pump.fun requires one.";return}
   if(!CONFIG.api){m.className="msg";m.textContent=DEMO_ON?"Demo mode: this is where your wallet would pop up to sign the launch. Launches open on launch day.":"Launches open soon. Your details are checked and ready, so come back on launch day.";if(DEMO_ON){lfSetStep(2);setTimeout(()=>lfSetStep(1),2500)}return}
   const prov=walletProvider();
-  if(!prov){if(openInWalletApp())return;m.textContent="No Solana wallet found in this browser. Open Exposure in Phantom, Solflare or Backpack, or install one.";return}
+  if(!prov){if(openInWalletApp())return;m.textContent="No Solana wallet found in this browser. Open Calls in Phantom, Solflare or Backpack, or install one.";return}
   go_.disabled=true;
   try{
     m.className="msg";m.textContent="Approve the connection in your wallet…";
@@ -1071,7 +1072,7 @@ document.getElementById("lf").addEventListener("submit",async e=>{
     m.textContent=err&&err.code===4001?"You cancelled in your wallet. Nothing was charged."
       :err&&err.stage==="prep"?(err.msg||"We couldn't prepare the launch. Nothing was charged. Try again in a minute.")
       :err&&err.stage==="check"?err.msg+" Nothing was charged.":err&&err.stage==="web3"?"A wallet helper didn't load. Check your connection and try again. Nothing was charged."
-      :"The launch didn't go through. If your wallet showed a sent transaction, check My Exposure before trying again.";
+      :"The launch didn't go through. If your wallet showed a sent transaction, check My Calls before trying again.";
   }finally{go_.disabled=false}
 });
 lfWalletUI();
@@ -1082,7 +1083,7 @@ document.getElementById("f").addEventListener("submit",e=>{
   const wal=document.getElementById("fWallet").value.trim(),m=document.getElementById("fMsg"),box=document.getElementById("myCalls");
   if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wal)){m.className="msg err";m.textContent="We couldn't read that Solana address. Paste the full address from your wallet.";box.hidden=true;return}
   const show=mine=>{
-    if(!mine.length){m.className="msg";m.textContent="No callouts from this wallet this round. Post one on pump.fun or Fomo about any Exposure coin you hold.";box.hidden=true;return}
+    if(!mine.length){m.className="msg";m.textContent="No callouts from this wallet this round. Post one on pump.fun or Fomo about any Calls coin you hold.";box.hidden=true;return}
     m.className="msg okm";m.textContent=`${mine.length} callout${mine.length>1?"s":""} entered this round.`;
     box.innerHTML=mine.map(x=>{const c=coinBy(x.coin)||{t:x.coin};return `<div class="pay">${avatar(x.u||wal)}<div class="t"><b>$${esc(c.t)}</b><span>${callLine(x)}</span></div><div class="amt">+${(+x.earned||0).toFixed(3)} SOL<small>est. this round</small></div></div>`}).join("");
     box.hidden=false};
